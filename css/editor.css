@@ -1,0 +1,33 @@
+body{
+    overflow: hidden;
+}
+
+#topbar{
+    position: absolute;
+    display: flex;
+    top: 0;
+    left: 0;
+    height: 40px;
+    width: 100%;
+    background-color: rgb(41, 41, 41);
+    align-items: center;
+}
+
+#code{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    height: 70%;
+    width: 70%;
+    padding: 3px;
+    border-radius: 5px;
+    transform: translate(-50%, -50%);
+    background-color: rgb(58, 58, 58);
+}
+
+#internalCode{
+    overflow: auto;
+    white-space: pre;
+    height: 92%;
+    margin: 0;
+}

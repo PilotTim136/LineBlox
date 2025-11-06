@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LineBlox - CREATOR DOCUMENTATION [1.0]</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <h1 style="text-align: center;">Welcome to the <code>NodeCreator 1.0</code> Documentation</h1>
+    The Node Creator is a tool to create custom nodes for LineBlox Editor.<br><br>
+
+    This tutorial contains multiple sections:<br>
+    <a href="#whatitis">What is Node Creator?</a><br>
+    <a href="#howtouse">How to use</a><br>
+    <a href="#nodes">Creating Nodes</a><br>
+    <a href="#nodedata">Node Data</a><br>
+    <a href="#io">Input & Output</a><br>
+    <a href="#typenodes">Type Nodes</a><br>
+    <a href="#example">Example</a><br>
+    
+    <br>
+
+    <h2 id="whatitis">What is Node Creator?</h2>
+    Node creator is a tool that allows you to create custom nodes for LineBlox Editor.<br>
+    While you can also do this manually with JS-JSON, you can also use this tool,
+    which allows you to create your own nodes with nodes.<br><br>
+    <hr>
+
+    <h2 id="howtouse">How to use</h2>
+    To use the Node Creator, open <a href="creator.html" target="_blank">creator.html</a>.<br>
+    On the right side, you will see the node drawer. This is where you can see the node you are creating.<br>
+    You can drag and drop nodes from the toolbox on the left side into the node workspace.<br><br>
+    <hr>
+
+    <h2 id="nodes">Creating Nodes</h2>
+    When you first load into the Node Creator, you will see this node:<br>
+    <img src="creator-docs/default.png" alt="default_drawer_node"><br>
+    This display shows the current node you have already created with the tool.<br>
+    To edit this node, drag & drop nodes from the toolbox from the toolbox into the workspace.<br><br>
+
+    To start creating nodes, you will have to add a node called "Start" which is under the category "Main".<br>
+    This node is required so the generator knows from where to generate from.<br>
+    <hr>
+
+    <h2 id="nodedata">Node Data</h2>
+    To edit the node in the drawer, you will have to drag a "Node Data" node into the workspace, which looks like this:<br>
+    <img src="creator-docs/node-data.png" alt="default_node_data_node"><br>
+    This node allows you to set the basic data for the node you are creating, such as the name, color, width and so on.<br>
+    You can either write your values directly into the white boxes (inputs) or connect other input-nodes to the circles on the left.<br><br>
+    <hr>
+
+    <h2 id="io">Input & Output</h2>
+    There are In-/Output nodes, that allow you to configure the inputs and outputs of your node:<br>
+    <img src="creator-docs/node-io.png" alt="default_io_node"><br>
+    <h4>NODE IO HANDLE</h4>
+    The Handle is used to define the Inputs/Outputs that will be generated.<br>
+    For Inputs, these will be the handles on the left side of the node in the editor<br>
+    Everything can be manually changed directly in the node, without needing other kinds of nodes.<br>
+    The "type" field defines what type of input/output it is, which will determine the what can connect.<br><br>
+
+    Inputs: <ul>
+        <li>NAME - The name of the field. For internal use, when code needs to access it.</li>
+        <li>DNAME - The displayName of the field. This will be displayed to the user.</li>
+        <li>TYPE - The type of the field</li>
+        <li>Integrated - Whether or not the input-field (toggle, text, number) is integrated in the node.</li>
+        <li>Hide Input - This will hide the input (circle) for the connection of other nodes.</li>
+        <li>Input Width - The width of the input-field.</li>
+        <li>Has Code - Whether or not code will be generated when that input/output will be generated.</li>
+    </ul>
+    > NOTE: <b>SOME</b> values will only be generated, once the toggle is enabled.
+        This applies to "Integrated" for example.
+    > NOTE: The "Type" field will be defaulted at "Any" if left empty.
+    <br><br>
+
+    <h4>IN OUT COMBINER</h4>
+    This node combines multiple inputs/outputs into one array that can be connected to the Node Data node.<br>
+    This way, you can create multiple inputs/outputs for your node.<br><br>
+
+    How the <code>In Out Combiner</code> node works:<br>
+    There's a button "Add In-/Output" which behaves like mutators in blockly.<br>
+    When it's clicked, a new input field will be created, that you can connect a <code>Node IO Handle</code> node to.<br>
+    There's no limit as of how many inputs/outputs you can create.<br>
+    The node with one mutation would look like this:<br>
+    <img src="creator-docs/node-io-1mut.png" alt="default_io_1mut_node"><br>
+    The node resizes automatically based on how many mutations there are.<br><br>
+
+    > NOTE: You can <b>NOT</b> currently create custom mutators in the Node Creator.<br><br>
+    Once you connect the <code>Input/Output Handle</code> to the inputs of the mutations,
+        it will get combined into a single array for the block to be generated properly.<br>
+    Finally connect the output of the <code>In Out Combiner</code> node to the respective
+        <code>input</code> or <code>output</code> value of the <code>Node Data</code> node.<br><br>
+    <hr>
+
+    <h2 id="typenodes">Type Nodes</h2>
+    Type nodes look as following:<br>
+    <img src="creator-docs/node-type.png" alt="default_type_node"><br>
+
+    <h4>Why the type nodes serve great purpose</h4>
+    They serve a great purpose, as they allow you to define the type of certain in-/outputs of your node.<br>
+    For example, if you want to create an input that only accepts boolean values, you can use the <code>Type: Boolean</code> node.<br>
+    This ensures that only boolean outputs can be connected to this input in the editor.<br><br>
+
+    <h4>Can I use custom type definitions?</h4>
+    You can use custom definitions with the block <code>Type (Custom)</code>.<br>
+    This will allow you to define the type you want via string.<br>
+    Then only nodes that have the output of that exact type, will be connected to that input.<br><br>
+
+    <h4>What does "Any" mean?</h4>
+    Any means that any type can be connected to that input.<br>
+    This is useful for generic nodes that can work with any type of input.<br><br>
+
+    > NOTE: Currently you can only connect one type to an input, which you can change via code manually, 
+        like this: <code>type: ["Boolean", "String"]</code>. This will only allow "Boolean" and "String" types to be connected.<br>
+        <code>This might be implemented after 1.0!</code><br><br>
+    
+    > NOTE: An attribute that is not currently given via type nodes, is "display", which will determine the color of
+        the input/output circle in the workspace. This can also be added manually in the code.<br>
+        The "display" attribute accepts existing types (e.g. "Boolean", "String", "Number", etc.)
+        or colors (e.g. "#FF0000", "rgb(255,0,0)", etc.)<br>
+        <code>This might be implemented after 1.0!</code><br><br>
+    
+    <hr>
+
+    <h2 id="example">Example</h2>
+    Here's an example for a simple node that has multiple inputs and an output:<br>
+    <img src="creator-docs/example.png" alt="example_node"><br>
+    This node is just for an example on how to build a simple node.<br><br>
+</body>
+</html>

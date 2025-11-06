@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LineBlox - EDITOR</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+    <div id="topbar">
+        <button onclick="document.getElementById('codeContainer').textContent=LBInst.GenerateCode();
+            document.getElementById('code').hidden = false;
+            Prism.highlightElement(document.getElementById('codeContainer'));">View Code</button> |
+        <button onclick="download()">Save workspace (file)</button> |
+        Load File: <input type="file" id="fileInput" accept=".lbnode"> |
+        <span id="FPS">FPS: 0</span>
+    </div>
+
+    <div id="code" hidden>
+        <center>
+            <button onclick="document.getElementById('code').hidden = true">Hide</button>
+            <button onclick="LBInst.ExecuteCode()">Execute</button>
+        </center>
+        <hr>
+        <div id="internalCode">
+            <pre class="line-numbers"><code id="codeContainer" class="language-javascript"></code></pre>
+        </div>
+    </div>
+
+    <script src="js/editor.js"></script>
+    <script src="js/toolbox.js"></script>
+    <script src="js/scrollbar.js"></script>
+    <script src="js/node.js"></script>
+    <script src="js/nodeHelper.js"></script>
+    <script src="js/nodes/main.js"></script>
+    <script src="otherJS/FPSMeasure.js"></script>
+    <script src="otherJS/script.js"></script>
+
+    <!-- syntax highlighting -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-javascript.min.js"></script>
+
+    <!-- syntax: row numbers -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs/plugins/line-numbers/prism-line-numbers.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+    <!-- syntax: copy to clipboard -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs/plugins/toolbar/prism-toolbar.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
+
+    <script>
+        function download(){
+            const code = LBInst.GetWorkspace();
+            const blob = new Blob([JSON.stringify(code)], {type: 'text/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'linebloxNodes.lbnode';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        document.getElementById("fileInput").addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            LBInst.SetWorkspace(data);
+        });
+    </script>
+</body>
+</html>
