@@ -467,7 +467,7 @@ BNodes.blocks.push({
             code: (data) => {
                 const msg = data.input["Message"];
                 const msgNum = Number.isNaN(Number(msg));
-                return `console.log(${LineBlox.wrapStr(msg, msgNum)});\n`;
+                return `console.log(${LineBlox.wrapStr(msg, !msgNum)});\n`;
             }
         },
         {
