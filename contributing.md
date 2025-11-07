@@ -37,7 +37,7 @@ By contributing, you help improve the tool for everyone.
 
 ## Code Style Guidelines
 
-- Use **consistent indentation** (2 spaces recommended for JS/HTML).
+- Use **consistent indentation** (4 spaces (or TAB) recommended for JS/HTML).
 - Keep your code **modular** and easy to read.
 - Write **descriptive variable and function names**.
 - Include **comments** for complex logic.
@@ -46,7 +46,7 @@ By contributing, you help improve the tool for everyone.
 
 ## Testing
 
-- Make sure your changes **don’t break existing features**.
+- Make sure your changes **don’t break existing features**. (If that does happen, please put a notice!)
 - If adding new nodes or functionality, test them in the demo page.
 
 ---
@@ -54,3 +54,4 @@ By contributing, you help improve the tool for everyone.
 ## Thank You!
 
 Every contribution helps! By contributing, you agree that your changes will be licensed under the **MIT License**.
+
