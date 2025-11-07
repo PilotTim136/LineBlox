@@ -20,6 +20,7 @@ const inputFiles = [
     "js/editor.js",
     "js/node.js",
     "js/nodeHelper.js",
+    "js/plugin.js",
     "js/scrollbar.js",
     "js/toolbox.js"
 ];

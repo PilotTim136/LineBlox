@@ -1,82 +1,17 @@
-let BNodes = {blocks: [], toolbox: {}};
+let BNodes = {blocks: [], toolbox: {}, inst: null};
 
 class LineBlox{
+    //VARIABLES
+    //#region uncategorized (fancydraw, nodes, connected, startblock, ...)
+
     #canvas;
     #ctx;
     #startingBlock = "__start__";
-
-    #mouseX = 0;
-    #mouseY = 0;
-    #mouseDown = false;
-    #dragging = false;
-    /** @type {BNode | null} */
-    draggingNode = null;
-    /** @type {Object | null} */
-    draggingNodePoint = null;
-    /** @type {Object | null} */
-    #prevDraggingNodePoint = null;
-
-    draggingScrollbarX = false;
-    draggingScrollbarY = false;
-
-    #xOffset = 0;
-    #xnOffset = 0;
-    #yOffset = 0;
-    #tbTotalOffset = 0;
-
     #frame = 0;
 
-    scrollX = 0;
-    scrollY = 0;
-    scrollBarX = 0;
-    scrollBarY = 0;
-    scrollBarXOffset = 0;
-    scrollBarYOffset = 0;
-
-    scrollIntensityX = 1;
-    scrollIntensityY = 1;
-
-    interacted = false;
-
-    /** @type {Function} Callback when draw() was called */
-    updateCallback = null;
-
-    toolbox = {
-        usingTB: false,
-        /** @type {HTMLCanvasElement} */
-        canvas: null,
-        /** @type {CanvasRenderingContext2D} */
-        ctx: null,
-        size: { x: 0, y: 0 },
-        mousePos: { x: 0, y: 0 },
-        clickedFrame: false,
-        selected: -1,
-        draggingNodeID: null,
-        scrollBarY: 0,
-        draggingScrollbarY: false,
-        scrollBarYOffset: 0,
-        scrollY: 0
-    };
-
-    get mouseX(){ return this.#mouseX }
-    get mouseY(){ return this.#mouseY }
-    get mouseDown(){ return this.#mouseDown }
-    get dragging(){ return this.#dragging }
-    get prevDraggingNodePoint(){ return this.#prevDraggingNodePoint }
-    get ctx(){ return this.#ctx }
-    get yOffset(){ return this.#yOffset }
-    get xOffset(){ return this.#xOffset }
-    get xnOffset(){ return this.#xnOffset }
-    get canvas(){ return this.#canvas }
-    get tbOffset(){ return this.#tbTotalOffset }
-
-    IsMouseAvailable(){
-        return this.#mouseDown && !(this.draggingNode || this.draggingNodePoint || this.#dragging || this.interacted || this.#dragBg);
-    }
-
     #htmlctx = null;
-
     connected = false;
+    interacted = false;
 
     /** FancyDraw settings - used for nice visuals
      * 
@@ -95,110 +30,192 @@ class LineBlox{
         }
     };
 
-
     /** @type {Array<BNode>} */
     nodes = [];
 
-    static drawDragNode(ctx, node, largestW, cy, inst, fontSize = 15, lw = 0, centerNode = false, x){
-        let w = lw != 0 ? (node.width > lw ? lw : node.width) : node.width;
-        let h = 30;
-        let offsetY = 0;
-        let maxIO = Math.max(node.inputs.length, node.outputs.length);
-        h = h + 5 + maxIO * 15;
-        let _x = largestW + 10 + (centerNode ? (x - largestW - 20 - w)/2 : 0);
+    //#endregion
 
-        const rounding = 5;
-        ctx.fillStyle = node.color;
-        if(inst.fancyDraw.nodes){
-            if(inst.fancyDraw.nodeHead.gradients){
-                const grad = ctx.createRadialGradient(_x, cy, w, _x, cy, 5);
-                grad.addColorStop(1, node.color);
-                grad.addColorStop(0, ColUtil.darkenColor(node.color, inst.fancyDraw.nodeHead.darkerAmount ?? 40));
-                ctx.fillStyle = grad;
-            }
-            ctx.beginPath();
-            ctx.roundRect(_x, cy, w, 20, [rounding, rounding, 0, 0]);
-            ctx.fill();
+    //#region mouseEvents
 
-            ctx.beginPath();
-            ctx.globalAlpha = 0.5;
-            ctx.roundRect(_x, cy + 20, w, h - 20, [0, 0, rounding, rounding]);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }else ctx.fillRect(_x, cy, w, h);
-        ctx.fillStyle = "white";
+    #mouseX = 0;
+    #mouseY = 0;
+    #mouseDown = false;
+    #dragging = false;
+    /** @type {BNode | null} */
+    draggingNode = null;
+    /** @type {Object | null} */
+    draggingNodePoint = null;
+    /** @type {Object | null} */
+    #prevDraggingNodePoint = null;
 
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = "white";
-        ctx.font = "15px Sans-Serif";
-        ctx.fillText(node.name, _x + w / 2, cy + 5, w);
+    //#endregion
 
-        offsetY = 0;
-        for(let input of node.inputs){
-            const by = cy + 30 + offsetY;
+    //#region scrollbars
+    
+    draggingScrollbarX = false;
+    draggingScrollbarY = false;
 
-            ctx.font = fontSize + "px Sans-Serif";
-            ctx.textAlign = "left";
-            ctx.textBaseline = "middle";
-            ctx.fillText(`${input.name}`, _x + 10, by, w / 2);
+    scrollX = 0;
+    scrollY = 0;
+    scrollBarX = 0;
+    scrollBarY = 0;
+    scrollBarXOffset = 0;
+    scrollBarYOffset = 0;
+    scrollIntensityX = 1;
+    scrollIntensityY = 1;
 
-            if(input.type == "Connect") BNode._drawTriangle(ctx, _x + 1, by - 5.5, 11);
-            else{
-                ctx.beginPath();
-                ctx.arc(_x, by, 5, 0, 2 * Math.PI);
-                ctx.fill();
-            }
+    //#endregion
 
-            offsetY += 15;
+    //#region offsets
+
+    #xOffset = 0;
+    #yOffset = 0;
+    #xnOffset = 0;
+
+    //#endregion
+
+    //#region plugin system
+
+    /** @type {boolean} Whether or not the Plugin system should be supported (WIP) */
+    supportPluginSystem = false;
+
+    #internalPlgn = {
+        loadedPlugins: [],
+        queue: [],
+        initPlugin: (plugin) => {
+            this.#internalPlgn.loadedPlugins.push(plugin);
+            plugin.Init();
         }
+    };
 
-        offsetY = 0;
-        for(let output of node.outputs){
-            const nx = _x + w - 10;
-            const by = cy + 30 + offsetY;
-
-            if(output.hideInput) continue;
-            if(output.type == "Connect") BNode._drawTriangle(ctx, nx + 11, by - 5.5, 11);
-            else{
-                ctx.beginPath();
-                ctx.arc(nx + 10, by, 5, 0, 2 * Math.PI);
-                ctx.fill();
+    #plugin = {
+        addPlugin: (plugin) => {
+            this.#internalPlgn.queue.push(plugin);
+        },
+        removePlugin: (plugin) => {
+            this.#internalPlgn.loadedPlugins = this.#internalPlgn.loadedPlugins.filter(p => p !== plugin);
+            for(let node of BNodes.blocks.filter(n => (n.plugin ?? "") === plugin.name)){
+                BNodes.blocks = BNodes.blocks.filter(n => n !== node);
             }
-            
-            ctx.font = fontSize + "px Sans-Serif";
-            ctx.textAlign = "right";
-            ctx.textBaseline = "middle";
-            const text = `${output.name} ${(output.type !== "Any" && output.type !== "Connect" && output.intergrated) ? "(" + output.type + ")" : ""}`;
-            ctx.fillText(text, nx, by, w / 2);
-
-            offsetY += 15;
+            plugin.Remove();
+        },
+        getPlugins: () => {
+            return [...this.#internalPlgn.loadedPlugins];
         }
-        return h;
+    };
+
+    /**
+     * Defines a new node for the global node list
+     * @param {Object} node Node definition
+     * @param {string} plugin Name of the plugin defining the node (for removal if node removed)
+     */
+    DefineNewPluginNode(node, plugin){
+        if(node.internalID == null || node.internalID === ""){
+            console.warn("Node internalID cannot be null (" + node.name + ")");
+            return;
+        }
+        const exists = BNodes.blocks.find(b => b.internalID === node.internalID);
+        if(exists){
+            console.warn("Node with internalID '" + node.internalID + "' already exists! (" + node.name + ")");
+            return;
+        }
+        node.plugin = plugin.name;
+        BNodes.blocks.push(node);
     }
 
-    drawGrid(){
-        const gridSize = 30;
-        const step = gridSize * 1;
+    get plugin(){ return this.#plugin }
 
-        this.#ctx.strokeStyle = "#555"; 
-        this.#ctx.lineWidth = 1;
+    /**
+     * WARNING!
+     * This will remove all currently loaded plugins and re-initialize them!
+     */
+    InitializePlugins(){
+        for(const plgn of this.#internalPlgn.loadedPlugins) plgn.Remove();
+        this.#internalPlgn.loadedPlugins = [];
 
-        for(let x = (-this.scrollBarX * this.scrollIntensityX) % step; x < this.#canvas.width; x += step){
-            this.#ctx.beginPath();
-            this.#ctx.moveTo(x, 0);
-            this.#ctx.lineTo(x, this.#canvas.height);
-            this.#ctx.stroke();
-        }
+        const plugins = this.#internalPlgn.queue;
+        const pluginMap = new Map();
+        plugins.forEach(p => pluginMap.set(p.name, p));
 
-        for(let y = (-this.scrollBarY * this.scrollIntensityY) % step; y < this.#canvas.height; y += step){
-            this.#ctx.beginPath();
-            this.#ctx.moveTo(0, y);
-            this.#ctx.lineTo(this.#canvas.width, y);
-            this.#ctx.stroke();
+        const visited = new Set();
+        const stack = new Set();
+
+        const load = (plgn) => {
+            if(visited.has(plgn.name)) return;
+            if(stack.has(plgn.name)){
+                console.error(`Cyclic dependency detected for plugin: ${plgn.name}`);
+                return;   
+            }
+
+            stack.add(plgn.name);
+
+            for (const depName of plgn.dependencies) {
+                const dep = pluginMap.get(depName);
+                if (!dep) {
+                    console.warn(`Dependency not found: ${depName} for plugin: ${plgn.name}`);
+                    continue;
+                }
+                load(dep);
+            }
+
+            stack.delete(plgn.name);
+            visited.add(plgn.name);
+            this.#internalPlgn.initPlugin(plgn);
+        };
+
+        for(const plgn of plugins){
+            load(plgn);
         }
     }
 
+    //#endregion
+
+    //#region callbacks
+
+    /** @type {Function} Callback when draw() was called */
+    updateCallback = null;
+
+    //#endregion
+
+    //#region toolbox
+
+    #tbTotalOffset = 0;
+    toolbox = {
+        usingTB: false,
+        /** @type {HTMLCanvasElement} */
+        canvas: null,
+        /** @type {CanvasRenderingContext2D} */
+        ctx: null,
+        size: { x: 0, y: 0 },
+        mousePos: { x: 0, y: 0 },
+        clickedFrame: false,
+        selected: -1,
+        draggingNodeID: null,
+        scrollBarY: 0,
+        draggingScrollbarY: false,
+        scrollBarYOffset: 0,
+        scrollY: 0
+    };
+
+    //#endregion
+
+    //#region getters
+    
+    get mouseX(){ return this.#mouseX }
+    get mouseY(){ return this.#mouseY }
+    get mouseDown(){ return this.#mouseDown }
+    get dragging(){ return this.#dragging }
+    get prevDraggingNodePoint(){ return this.#prevDraggingNodePoint }
+    get ctx(){ return this.#ctx }
+    get yOffset(){ return this.#yOffset }
+    get xOffset(){ return this.#xOffset }
+    get xnOffset(){ return this.#xnOffset }
+    get canvas(){ return this.#canvas }
+    get tbOffset(){ return this.#tbTotalOffset }
+
+    //#endregion
+
+    //#region unused (currently)
     //for the broken code
     //currently unused
     #dragBgX = 0;
@@ -206,21 +223,10 @@ class LineBlox{
     #dragSSX = 0;   //dragScrollStartX
     #dragSSY = 0;   //dragScrollStartY
     #dragBg = false;
+    //#endregion
 
-    /**
-     * Can be used for node-internal system for string-checks.
-     * @param {String} v The string that will be checked
-     * @param {boolean} isNum If the string is a number
-     * @returns 
-     */
-    static wrapStr(v, isNum){
-        if(v === undefined || v === null) return undefined; 
-        if(isNum) return v;
-        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))){
-            return v;
-        }
-        return `"${v}"`;
-    }
+    //FUNCTIONS
+    //#region drawing
 
     drawLoop = (execReqFrame = false) => {
         const ctx = this.#ctx;
@@ -303,12 +309,6 @@ class LineBlox{
             requestAnimationFrame(this.drawLoop);
     }
 
-    #getMousePosition(event) {
-        let rect = this.#canvas.getBoundingClientRect();
-        this.#mouseX = event.clientX - rect.left;
-        this.#mouseY = event.clientY - rect.top;
-    }
-
     generateNode(node, clone = false){
         let inputs = node.inputs.map(h => new NodeIOHandle(h.name, h.dName ?? null, h.code ?? null, h.values, h.display, h.type ?? "Any",
             h.integrated ?? false, h.hideInput ?? false, h.inputWidth ?? 0, h.ignoreText ?? false));
@@ -318,6 +318,120 @@ class LineBlox{
         return new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
             this.#mouseY + this.scrollBarY * this.scrollIntensityY, node.color ?? "#eb8634", node.width ?? 200, this,
             node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false);
+    }
+
+    drawGrid(){
+        const gridSize = 30;
+        const step = gridSize * 1;
+
+        this.#ctx.strokeStyle = "#555"; 
+        this.#ctx.lineWidth = 1;
+
+        for(let x = (-this.scrollBarX * this.scrollIntensityX) % step; x < this.#canvas.width; x += step){
+            this.#ctx.beginPath();
+            this.#ctx.moveTo(x, 0);
+            this.#ctx.lineTo(x, this.#canvas.height);
+            this.#ctx.stroke();
+        }
+
+        for(let y = (-this.scrollBarY * this.scrollIntensityY) % step; y < this.#canvas.height; y += step){
+            this.#ctx.beginPath();
+            this.#ctx.moveTo(0, y);
+            this.#ctx.lineTo(this.#canvas.width, y);
+            this.#ctx.stroke();
+        }
+    }
+
+    static drawDragNode(ctx, node, largestW, cy, inst, fontSize = 15, lw = 0, centerNode = false, x){
+        let w = lw != 0 ? (node.width > lw ? lw : node.width) : node.width;
+        let h = 30;
+        let offsetY = 0;
+        let maxIO = Math.max(node.inputs.length, node.outputs.length);
+        h = h + 5 + maxIO * 15;
+        let _x = largestW + 10 + (centerNode ? (x - largestW - 20 - w)/2 : 0);
+
+        const rounding = 5;
+        ctx.fillStyle = node.color;
+        if(inst.fancyDraw.nodes){
+            if(inst.fancyDraw.nodeHead.gradients){
+                const grad = ctx.createRadialGradient(_x, cy, w, _x, cy, 5);
+                grad.addColorStop(1, node.color);
+                grad.addColorStop(0, ColUtil.darkenColor(node.color, inst.fancyDraw.nodeHead.darkerAmount ?? 40));
+                ctx.fillStyle = grad;
+            }
+            ctx.beginPath();
+            ctx.roundRect(_x, cy, w, 20, [rounding, rounding, 0, 0]);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.globalAlpha = 0.5;
+            ctx.roundRect(_x, cy + 20, w, h - 20, [0, 0, rounding, rounding]);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }else ctx.fillRect(_x, cy, w, h);
+        ctx.fillStyle = "white";
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = "white";
+        ctx.font = "15px Sans-Serif";
+        ctx.fillText(node.name, _x + w / 2, cy + 5, w);
+
+        offsetY = 0;
+        for(let input of node.inputs){
+            const by = cy + 30 + offsetY;
+
+            ctx.font = fontSize + "px Sans-Serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${input.name}`, _x + 10, by, w / 2);
+
+            if(input.type == "Connect") BNode._drawTriangle(ctx, _x + 1, by - 5.5, 11);
+            else{
+                ctx.beginPath();
+                ctx.arc(_x, by, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            offsetY += 15;
+        }
+
+        offsetY = 0;
+        for(let output of node.outputs){
+            const nx = _x + w - 10;
+            const by = cy + 30 + offsetY;
+
+            if(output.hideInput) continue;
+            if(output.type == "Connect") BNode._drawTriangle(ctx, nx + 11, by - 5.5, 11);
+            else{
+                ctx.beginPath();
+                ctx.arc(nx + 10, by, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            ctx.font = fontSize + "px Sans-Serif";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const text = `${output.name} ${(output.type !== "Any" && output.type !== "Connect" && output.intergrated) ? "(" + output.type + ")" : ""}`;
+            ctx.fillText(text, nx, by, w / 2);
+
+            offsetY += 15;
+        }
+        return h;
+    }
+
+    //#endregion
+
+    //#region mouse handling
+
+    #getMousePosition(event) {
+        let rect = this.#canvas.getBoundingClientRect();
+        this.#mouseX = event.clientX - rect.left;
+        this.#mouseY = event.clientY - rect.top;
+    }
+
+    IsMouseAvailable(){
+        return this.#mouseDown && !(this.draggingNode || this.draggingNodePoint || this.#dragging || this.interacted || this.#dragBg);
     }
 
     callCtxMenu(e, prevCon = null, clickedNode = null){
@@ -436,6 +550,10 @@ class LineBlox{
         if(e) ctxc.addEventListener("contextmenu", (e) => e.preventDefault());
         this.#htmlctx = ctxc;
     }
+
+    //#endregion
+
+    //#region workspace manipulation & code execution
 
     GenerateCodeFromNode(node, currentCursive = 0){
         /** @param {BNode} node */
@@ -811,8 +929,9 @@ class LineBlox{
         }
         console.log("=========EXEC END=========");
     }
+    //#endregion
 
-    //-----------------Toolbox Manipulation----------------//
+    //#region toolbox manipulation
 
     /**
      * This dynamically adds a category to the toolbox
@@ -877,7 +996,26 @@ class LineBlox{
         cat.blocks = cat.blocks.filter(bID => bID !== nodeiID);
     }
 
-    //----------------------Constructor--------------------//
+    /**
+     * Defines a new node for the global node list
+     * @param {Object} node Node definition
+     */
+    DefineNewNode(node){
+        if(node.internalID == null || node.internalID === ""){
+            console.warn("Node internalID cannot be null (" + node.name + ")");
+            return;
+        }
+        const exists = BNodes.blocks.find(b => b.internalID === node.internalID);
+        if(exists){
+            console.warn("Node with internalID '" + node.internalID + "' already exists! (" + node.name + ")");
+            return;
+        }
+        BNodes.blocks.push(node);
+    }
+
+    //#endregion
+
+    //#region constructor & string manipulation
 
     /**
      * Initializes and creates all the needed things for the node editor to run
@@ -890,6 +1028,8 @@ class LineBlox{
     constructor(startNId = null, top = 0, left = 0, right = 0, tbNodes = [], toolboxW = 0){
         const canvasTop = top;
         const canvasLeft = left;
+
+        BNodes.inst = this;
 
         BNodes.toolbox = tbNodes;
 
@@ -1022,4 +1162,21 @@ class LineBlox{
             .replace(/\t/g, '\\t');
         return first + inner + last;
     }
+
+    /**
+     * Can be used for node-internal system for string-checks.
+     * @param {String} v The string that will be checked
+     * @param {boolean} isNum If the string is a number
+     * @returns 
+     */
+    static wrapStr(v, isNum){
+        if(v === undefined || v === null) return undefined; 
+        if(isNum) return v;
+        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))){
+            return v;
+        }
+        return `"${v}"`;
+    }
+
+    //#endregion
 }
