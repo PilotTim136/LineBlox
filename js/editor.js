@@ -812,6 +812,73 @@ class LineBlox{
         console.log("=========EXEC END=========");
     }
 
+    //-----------------Toolbox Manipulation----------------//
+
+    /**
+     * This dynamically adds a category to the toolbox
+     * @param {string} name Category name
+     * @param {string | null} color Category color
+     * @param {Array | null} nodes Category nodes (internalIDs)
+     */
+    AddCategoryToToolbox(name, color = null, nodes = null){
+        if(BNodes.toolbox.find(c => c.category === name)){
+            console.warn(`Category "${name}" already exists in the toolbox!`);
+            return;
+        }
+        BNodes.toolbox.push({
+            category: name,
+            color: color ?? "rgba(207, 125, 2, 1)",
+            blocks: nodes ?? []
+        });
+    }
+
+    /**
+     * Adds a node to a category in the toolbox
+     * @param {string} category Category name
+     * @param {string | Array} nodeInternalID If string, adds single node, if array adds multiple nodes
+     */
+    AddNodeToCategory(category, nodeiID){
+        const cat = BNodes.toolbox.find(c => c.category === category);
+        if(!cat){
+            console.warn(`Category "${category}" does not exist in the toolbox!`);
+            return;
+        }
+        if(Array.isArray(nodeiID)){
+            for(const bID of nodeiID){
+                if(!cat.blocks.includes(bID))
+                    cat.blocks.push(bID);
+            }
+        }else{
+            if(!cat.blocks.includes(nodeiID))
+                cat.blocks.push(nodeiID);
+        }
+    }
+
+    /**
+     * Removes the entire category from the toolbox
+     * @param {string} category Category name
+     */
+    RemoveCategoryFromToolbox(category){
+        BNodes.toolbox = BNodes.toolbox.filter(c => c.category !== category);
+    }
+
+    /**
+     * Removes the node from the given category in the toolbox
+     * @param {string} category Category name
+     * @param {string} nodeiID Node internal-ID from category
+     * @returns 
+     */
+    RemoveNodeFromCategory(category, nodeiID){
+        const cat = BNodes.toolbox.find(c => c.category === category);
+        if(!cat){
+            console.warn(`Category "${category}" does not exist in the toolbox!`);
+            return;
+        }
+        cat.blocks = cat.blocks.filter(bID => bID !== nodeiID);
+    }
+
+    //----------------------Constructor--------------------//
+
     /**
      * Initializes and creates all the needed things for the node editor to run
      * @param {string} startNId Start node ID (on what node your code will start on) | default: null (block: "\_\_start\_\_")
