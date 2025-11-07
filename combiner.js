@@ -43,4 +43,4 @@ for(const f of inputFiles){
     code += content + "\n";
 }
 
-fs.writeFileSync(`js/combined/lineblox-${major}.${minor}.${patch}.js`, code);
+fs.writeFileSync(`versions/lineblox-${major}.${minor}.${patch}.js`, code);
