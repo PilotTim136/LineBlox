@@ -5,7 +5,6 @@
 
 ## Demo
 
-![Demo](https://img.shields.io/badge/demo-online-blue)
 Try the live demo here: [LineBlox Demo](https://pilottim136.github.io/LineBlox)
 
 
@@ -38,4 +37,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to get started.
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
 ![License](https://img.shields.io/badge/license-MIT-green)
+
