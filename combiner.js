@@ -10,8 +10,10 @@ const fs = require("fs");
 
 //will generate like: "lineblox-1.0.0.js"
 const major = 1;
-const minor = 0;
+const minor = 1;
 const patch = 0;
+
+const isBeta = true;
 
 //files (IN ORDER)
 const inputFiles = [
@@ -43,4 +45,4 @@ for(const f of inputFiles){
     code += content + "\n";
 }
 
-fs.writeFileSync(`versions/lineblox-${major}.${minor}.${patch}.js`, code);
+fs.writeFileSync(`versions/lineblox-${major}.${minor}.${patch}${isBeta ? "-BETA" : ""}.js`, code);
