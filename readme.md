@@ -12,18 +12,15 @@ Try the live demo here: [LineBlox Demo](https://pilottim136.github.io/LineBlox)
 
 - Drag-and-drop node interface
 - Create logic visually without writing code
-- Easily extensible with custom nodes (Currently no dynamic way to import nodes into workspace)
+- Easily extensible with custom nodes
+
 
 ## Installation
 
-1. Clone this repository:
-
-```bash
-   git clone https://github.com/PilotTim136/LineBlox.git
-```
-
-2. Open index.html or editor.html in your browser.
-3. Start creating!
+1. Download this repository (Code -> Download ZIP)
+2. Exctract the zip
+3. Open index.html or editor.html in your browser.
+4. Start creating!
 
 
 ## Quick Start / Script Import
@@ -40,28 +37,43 @@ This script contains the full workspace and toolbox environment for you to use i
 
 ### LineBlox setup
 
-To actually use the Javascript-Imported runtime, you'll need to create a file, that contains following content:
+To actually use the Javascript-Imported runtime, you'll need to create a JS file containing the following content:
 
 ```javascript
 //This is an example how to create categories for the toolbox.
-const toolbox = {
-   category: "Main", //category name
-   color: "green",   //category color
-   blocks: [
-      "__start__"    //block-ID
-   ]
-}
+const toolbox = [
+   {
+      category: "Main", //category name
+      color: "green",   //category color
+      blocks: [
+         "__start__"    //block-ID
+      ]
+   }
+]
 
 //This is how you can set up the workspace itself.
-const LBInst = new LineBlox(null, 40, 0, 0, toolbox, 300);
-//PARAMETERS:
-//"null": What node the code will start one (node-ID, null = "__start__").
-//"40": Y-offset for the workspace & toolbox.
-//"0": X-offset for the workspace & toolbox.
-//"0": Max-width (basically: in CSS "right: 0px")
-//"tb": toolbox categories
-//"300": the amount of pixels to give the toolbox (left side)
+const config = new LineBloxConfig();               //initialize config
+config.offsets.left = 0;                           //set offsets here (you do not have to set them, the defaults are 0)
+config.offsets.right = 0;
+config.offsets.top = 40;
+
+config.toolbox.tbNodes = toolbox;                  //set the categories for the workspace
+config.toolbox.toolboxW = 300;                     //width of the toolbox - less than 100 and there is no toolbox.
+
+const LBInst = new LineBlox(null, config);         //PARAMETERS:
+                                                   //"null": What node the code will start one (node-ID, null = "__start__").
+                                                   //"config": Configuration for the LineBlox instance
+
+await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc"); 
+                           //PARAMETERS:
+                           //"js/nodes/plugins/" -> path to the plugins
+                           //"pluginDefs.jsonc" -> the defenition for the plugins (view "js/nodes/plugins/pluginDefs.jsonc" for more information
+                           //about how and why to store plugins in a JSON. You will also get a small set of instructions what to do)
 ```
+
+See [pluginSystem.md](pluginSystem.md) for ways to integrate the plugin system into your project.
+
+> **NOTE**: This example was from code in the "otherJS/script.js" file. This example does include comments, which the file didn't have.
 
 ### Other LineBlox components:
 
@@ -96,7 +108,7 @@ This contains every node available in the DEMO.
 
 Contributions are always welcome!
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for ways to get started.
+See [contributing.md](contributing.md) for ways to get started.
 
 
 ## License

@@ -1,6 +1,6 @@
-//this is an example plugin for LineBlox that adds NodeJS functionality (require, ...)
+//this is an example plugin for LineBlox that adds 1 node: require
 
-const njsPlugin = new LBPlugin("nodeJS");
+const njsPlugin = new LBPlugin("lb_njs", "nodeJS");
 
 //for intellisense autocompletion
 /**
@@ -13,7 +13,7 @@ njsPlugin.initFunc = (inst, lb) => {
     const u_col = "rgba(0, 124, 6, 1)";       //universal color for this plugin
     const u_cat = "NodeJS";                     //universal category name for this plugin
 
-    inst.AddCategory(u_cat, u_col);          //category data for the toolbox
+    inst.AddCategory(u_cat, u_col);             //category data for the toolbox
 
     //define the nodes one by one.
     //give plugin name as string.
@@ -46,5 +46,9 @@ njsPlugin.initFunc = (inst, lb) => {
         ]
     }, u_cat);
 
-    console.log("Initialized nodeJS plugin.");
+    console.log("Initialized nodeJS plugin");
 };
+
+njsPlugin.AddToWorkspace(); //adds it to the workspace
+
+//todo: use `BNodes.inst.InitializePlugins()` in devTools to try the plugin (please do not use that function in your plugin)

@@ -1,8 +1,4 @@
-//TODO:
-//Add more plugin hooks (onNodeCreate, onNodeDelete, onConnect, onDisconnect, etc) (maybe)
-//Test plugin system
-//Document plugin system
-//add initialization function
+//TODO: Add more plugin hooks (onNodeCreate, onNodeDelete, onConnect, onDisconnect, etc) (maybe)
 
 class LBPlugin{
     /** @type {(inst: LBPlugin, lb: LineBlox) => void | null} Callback when plugin created */
@@ -11,6 +7,8 @@ class LBPlugin{
     remFunc = null;
     /** @type {string} Name for plugin */
     name = "";
+    /** @type {string} Unuqie ID for plugin - use filename! */
+    uuid = "";
     /** @type {Array<string>} List of plugin names that are dependencies for this plugin */
     dependencies = [];
 
@@ -45,8 +43,8 @@ class LBPlugin{
      * @param {string} color HEX or RGB(a) color for the category
      */
     AddCategory(name, color){
-        if(name == null) name = this.name;
-        this.#inst.AddCategoryToToolbox(name, color); 
+        name = name ?? this.name;
+        this.#inst.AddCategoryToToolbox(name, color, null, this.name); 
     }
 
     /**
@@ -55,18 +53,20 @@ class LBPlugin{
      * @param {string | null} category Category name | null for plugin-name
      */
     AddNode(def, category = null){
-        this.#inst.DefineNewPluginNode(def, this.name);
+        this.#inst.DefineNewPluginNode(def, this);
         this.#inst.AddNodeToCategory(category ?? this.name, def.internalID, njsPlugin.name);
     }
 
     /**
      * Creates a new LineBloxPlugin instance. Can contain init and remove callbacks.
-     * @param {string} name 
+     * @param {string} uuid Unique ID for the plugin - use filename!
+     * @param {string} name Name of the plugin
      * @param {Array<string> | null} dependencies List of plugin names that are dependencies for this plugin
      * @param {(lb: LineBlox) => void | null} initFunc Init function. Will contain instance of LineBlox as parameter
      * @param {() => void | null} remFunc 
      */
-    constructor(name, dependencies = null, initFunc = null, remFunc = null){
+    constructor(uuid, name, dependencies = null, initFunc = null, remFunc = null){
+        this.uuid = uuid;
         this.name = name;
         this.dependencies = dependencies ?? [];
         this.initFunc = initFunc;

@@ -416,7 +416,7 @@ BNodes.blocks.push({
             inputWidth: 60,
             ignoreText: true,
             code: (data) => {
-                return `"${LineBlox._escapeForStr(data.output["str"])}"`;
+                return `${LineBlox._escapeForStr(LineBlox._wrapStr(data.output["str"]))}`;
             }
         }
     ]
@@ -460,7 +460,7 @@ BNodes.blocks.push({
             name: "",
             type: "Connect",
             code: (data) => {
-                return `console.log(${LineBlox._wrapStr(data.input["Message"])});\n`;
+                return `console.log(${data.input["Message"]});\n`;
             }
         },
         {

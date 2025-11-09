@@ -33,6 +33,8 @@ class LineBlox{
     /** @type {Array<BNode>} */
     nodes = [];
 
+    #pluginDefs = [];
+
     //#endregion
 
     //#region mouseEvents
@@ -76,8 +78,14 @@ class LineBlox{
 
     //#region plugin system
 
-    /** @type {boolean} Whether or not the Plugin system should be supported (WIP) */
-    supportPluginSystem = false;
+    #supportPluginSystem = false;
+    #pluginPath = null;
+
+    #allowPlugin(){
+        if(this.#supportPluginSystem) return true;
+        console.warn("Plugins cannot be initialized. Plugins are not supported in this workspace.");
+        return false;
+    }
 
     #internalPlgn = {
         loadedPlugins: [],
@@ -89,13 +97,22 @@ class LineBlox{
     };
 
     #plugin = {
+        /** @param {LBPlugin} plugin */
         addPlugin: (plugin) => {
+            if(!this.#allowPlugin()) return;
             this.#internalPlgn.queue.push(plugin);
         },
+        /** @param {LBPlugin} plugin */
         removePlugin: (plugin) => {
+            //nodes
             this.#internalPlgn.loadedPlugins = this.#internalPlgn.loadedPlugins.filter(p => p !== plugin);
             for(let node of BNodes.blocks.filter(n => (n.plugin ?? "") === plugin.name)){
                 BNodes.blocks = BNodes.blocks.filter(n => n !== node);
+            }
+            //categories
+            console.log(BNodes.toolbox);
+            for(let cat of BNodes.toolbox.filter(c => c.plugin ?? "" === plugin.name)){
+                BNodes.toolbox = BNodes.toolbox.filter(c => c !== cat);
             }
             plugin.Remove();
         },
@@ -107,9 +124,10 @@ class LineBlox{
     /**
      * Defines a new node for the global node list
      * @param {Object} node Node definition
-     * @param {string} plugin Name of the plugin defining the node (for removal if node removed)
+     * @param {LBPlugin} plugin Name of the plugin defining the node (for removal if node removed)
      */
     DefineNewPluginNode(node, plugin){
+        if(!this.#allowPlugin()) return;
         if(node.internalID == null || node.internalID === ""){
             console.warn("Node internalID cannot be null (" + node.name + ")");
             return;
@@ -120,16 +138,15 @@ class LineBlox{
             return;
         }
         node.plugin = plugin.name;
+        node.pluginUuid = plugin.uuid;
         BNodes.blocks.push(node);
     }
 
     get plugin(){ return this.#plugin }
 
-    /**
-     * WARNING!
-     * This will remove all currently loaded plugins and re-initialize them!
-     */
+    /** WARNING! This will remove all currently loaded plugins and re-initialize them! */
     InitializePlugins(){
+        if(!this.#allowPlugin()) return;
         for(const plgn of this.#internalPlgn.loadedPlugins) plgn.Remove();
         this.#internalPlgn.loadedPlugins = [];
 
@@ -149,9 +166,9 @@ class LineBlox{
 
             stack.add(plgn.name);
 
-            for (const depName of plgn.dependencies) {
+            for(const depName of plgn.dependencies) {
                 const dep = pluginMap.get(depName);
-                if (!dep) {
+                if(!dep){
                     console.warn(`Dependency not found: ${depName} for plugin: ${plgn.name}`);
                     continue;
                 }
@@ -165,6 +182,41 @@ class LineBlox{
 
         for(const plgn of plugins){
             load(plgn);
+        }
+    }
+
+    /**
+     * @param {string} plugin The plugin to find and add
+    */
+    async #FindAndAddPlugin(plugin){
+        //init checks
+        if(this.#pluginPath == null || this.#pluginPath == ""){
+            console.warn("cannot add plugin: pluginPath is null or empty");
+            return;
+        }
+        if(plugin == null || plugin == ""){
+            console.warn("cannot add plugin: plugin is null or empty");
+            return;
+        }
+
+        await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = `${this.#pluginPath}${plugin}.js`;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error("Failed to load plugin: " + plugin));
+            document.head.appendChild(s);
+        });
+    }
+
+    /**
+     * This is a seperate function, because async
+     */
+    async #LoadPluginHandle(plgns){
+        try{
+            await Promise.all(plgns.map(plugin => this.#FindAndAddPlugin(plugin)));
+            this.InitializePlugins();
+        }catch(e){
+            throw new Error("Failed to load plugins: " + e);
         }
     }
 
@@ -212,6 +264,7 @@ class LineBlox{
     get xnOffset(){ return this.#xnOffset }
     get canvas(){ return this.#canvas }
     get tbOffset(){ return this.#tbTotalOffset }
+    get pluginDefinitions(){ return this.#pluginDefs }
 
     //#endregion
 
@@ -309,15 +362,24 @@ class LineBlox{
             requestAnimationFrame(this.drawLoop);
     }
 
+    /**
+     * This will create the node onto the workspace
+     * @param {Object} node Node definition
+     * @param {Boolean} clone Whether or not the node is a clone
+     * @returns 
+     */
     generateNode(node, clone = false){
         let inputs = node.inputs.map(h => new NodeIOHandle(h.name, h.dName ?? null, h.code ?? null, h.values, h.display, h.type ?? "Any",
             h.integrated ?? false, h.hideInput ?? false, h.inputWidth ?? 0, h.ignoreText ?? false));
         let outputs = node.outputs.map(h => new NodeIOHandle(h.name, h.dName ?? null, h.code ?? null, h.values,h.display, h.type ?? "Any",
             h.integrated ?? false, h.hideInput ?? false, h.inputWidth ?? 0, h.ignoreText ?? false));
 
-        return new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
+        const n = new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
             this.#mouseY + this.scrollBarY * this.scrollIntensityY, node.color ?? "#eb8634", node.width ?? 200, this,
-            node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false);
+            node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false, node.pluginUuid);
+        n.plugin = node.plugin;
+        n.pluginPath = node.pluginPath;
+        return n;
     }
 
     drawGrid(){
@@ -749,78 +811,72 @@ class LineBlox{
      * @returns Workspace nodes (<inst>.nodes)
      */
     GetWorkspace(){
-        const nodes = [];
+        const ws = {
+            plugins: [],
+            nodes: []
+        };
+        const add = (h) => {
+            return {
+                name: h.name,
+                dName: h.dName ?? h.name,
+                type: h.type,
+                value: h.value,
+                ...(h.display ? {display: h.display} : {}),
+                ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
+                ...(h.values ? {values: h.values} : {}),
+                ...(h.display != "" ? {display: h.display} : {}),
+                ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
+                ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
+                ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
+                ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
+                connection: h.connection ? {
+                    fromName: h.connection.fromName ?? "",
+                    toName: h.connection.toName ?? "",
+                    fromUUID: h.connection.from?.uuid ?? "",
+                    toUUID: h.connection.to?.uuid ?? "",
+                    code: null
+                } : null
+            };
+        }
         for(let node of this.nodes){
-            const nodeJson = {
+            const nj = {
                 uuid: node.uuid,
                 internalName: node.internalName,
+                ...(node.pluginUuid != null ? {plugin: node.pluginUuid} : {}),
                 x: node.x,
                 y: node.y,
-                inputs: node.inputs.map(h => ({
-                    name: h.name,
-                    dName: h.dName ?? h.name,
-                    type: h.type,
-                    value: h.value,
-                    ...(h.display ? {display: h.display} : {}),
-                    ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
-                    ...(h.values ? {values: h.values} : {}),
-                    ...(h.display != "" ? {display: h.display} : {}),
-                    ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
-                    ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
-                    ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
-                    ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
-                    connection: h.connection ? {
-                        fromName: h.connection.fromName ?? "",
-                        toName: h.connection.toName ?? "",
-                        fromUUID: h.connection.from?.uuid ?? "",
-                        toUUID: h.connection.to?.uuid ?? "",
-                        code: null
-                    } : null
-                })),
-                outputs: node.outputs.map(h => ({
-                    name: h.name,
-                    dName: h.dName ?? h.name,
-                    type: h.type,
-                    value: h.value,
-                    ...(h.display ? {display: h.display} : {}),
-                    ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
-                    ...(h.values ? {values: h.values} : {}),
-                    ...(h.display != "" ? {display: h.display} : {}),
-                    ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
-                    ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
-                    ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
-                    ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
-                    connection: h.connection ? {
-                        fromName: h.connection.fromName ?? "",
-                        toName: h.connection.toName ?? "",
-                        fromUUID: h.connection.from?.uuid ?? "",
-                        toUUID: h.connection.to?.uuid ?? "",
-                        code: null
-                    } : null
-                }))
+                inputs: node.inputs.map(add),
+                outputs: node.outputs.map(add)
             };
-            console.log(nodeJson.outputs);
-            nodes.push(nodeJson);
+            ws.nodes.push(nj);
+            console.log("saving:", nj, "pluginUUID:", node.pluginUuid ?? "<noUuid>", "/", nj.pluginUuid ?? "<noUuid>");
+            if(node.pluginUuid != null && !ws.plugins.includes(node.pluginUuid)) ws.plugins.push(node.pluginUuid);
         }
-        return nodes;
+        return ws;
     }
 
     /**
      * Sets the workspace from the given json
-     * @param {Array<BNode> | string} w Workspace json (or workspace STRING)
+     * @param {Object | string} w Workspace json (or workspace STRING)
      */
-    SetWorkspace(w){
+    async SetWorkspace(w){
         //for IntelliSense
-        /** @type {Array<BNode>} */
-        let ws = [];
+        let gws = {};
         if(typeof w === "string"){
-            ws = JSON.parse(w);
-        }else if(Array.isArray(w)){
-            ws = w;
+            gws = JSON.parse(w);
+        }else if(typeof w === "object"){
+            gws = w;
         }else{
             console.warn("no valid format! (" + typeof w + ")");
             return;
         }
+
+        /** @type {Array<BNode>} */
+        let ws = gws.nodes;
+
+        //load plugins
+        console.log("loading plugins:", gws.plugins);
+        if(this.#supportPluginSystem) await this.#LoadPluginHandle(gws.plugins);
 
         const nodeMap = {};
 
@@ -836,6 +892,10 @@ class LineBlox{
             let inputs = [];
             let outputs = [];
             const jn = BNodes.blocks.find(n => n.internalID === node.internalName);
+            if(jn == null){
+                console.error("node is undefined or null");
+                continue;
+            }
 
             for(let h of node.inputs){
                 const n = createNodeIOHandle(h);
@@ -847,13 +907,21 @@ class LineBlox{
                 n.value = h.value;
                 outputs.push(n);
             }
-            const newNode = new BNode(jn.name, node.internalName, inputs, outputs,
-                node.x, node.y, jn.color, jn.width, this, jn.mutators ?? {}, jn.alwaysGenerate, node.uuid);
-            nodeMap[node.uuid] = newNode;
+            try{
+                const newNode = new BNode(jn.name, node.internalName, inputs, outputs,
+                    node.x, node.y, jn.color, jn.width, this, jn.mutators ?? {}, jn.alwaysGenerate, node.uuid);
+                nodeMap[node.uuid] = newNode;
+            }catch(e){
+                console.error("Error creating node:", e, jn);
+            }
         }
 
         for(let node of ws){
             const n = this.nodes.find(n => n.uuid == node.uuid);
+            if(n == null){
+                console.error("node is undefined or null");
+                continue;
+            }
             const bn = BNodes.blocks.find(b => b.internalID === n.internalName);
 
             n.inputs.forEach((inp, i) => {
@@ -919,6 +987,7 @@ class LineBlox{
         return null;
     }
 
+    //todo: remove this function
     ExecuteCode(){
         const code = this.GenerateCode();
         console.log("========EXEC START========");
@@ -938,14 +1007,16 @@ class LineBlox{
      * @param {string} name Category name
      * @param {string | null} color Category color
      * @param {Array | null} nodes Category nodes (internalIDs)
+     * @param {string | null} plgnName Plugin name for category. Please leave empty manually.
      */
-    AddCategoryToToolbox(name, color = null, nodes = null){
+    AddCategoryToToolbox(name, color = null, nodes = null, plgnName = null){
         if(BNodes.toolbox.find(c => c.category === name)){
             console.warn(`Category "${name}" already exists in the toolbox!`);
             return;
         }
         BNodes.toolbox.push({
             category: name,
+            ...(plgnName != null ? {plugin: plgnName} : {}),
             color: color ?? "rgba(207, 125, 2, 1)",
             blocks: nodes ?? []
         });
@@ -1015,23 +1086,49 @@ class LineBlox{
 
     //#endregion
 
-    //#region constructor
+    //#region constructor & plugin init
+
+    /**
+     * Enables plugin support for this instance
+     * @param {string} path Path for the plugins
+     * @param {string} defPath Path for the plugin definitions
+     */
+    async EnablePluginSupport(path, defPath){
+        //for more informations on why this has to be done,
+        //please visit: "js/nodes/plugins/pluginDefs.jsonc"
+
+        if(path == null || defPath == null) return;
+        defPath = path + defPath;
+
+        const res = await fetch(defPath);
+        let j = await res.text();
+        if(defPath.endsWith(".jsonc"))
+            j = j.replace(/\/\/.*$/gm, "");
+        this.#pluginDefs = JSON.parse(j);
+
+        this.#supportPluginSystem = true;
+        this.#pluginPath = path;
+    }
 
     /**
      * Initializes and creates all the needed things for the node editor to run
-     * @param {string} startNId Start node ID (on what node your code will start on) | default: null (block: "\_\_start\_\_")
-     * @param {Number} top The y-offset the canvas should have (to put your UI on)
-     * @param {Number} left The x-offset the canvas should have (to put your UI on)
-     * @param {Array} toolboxW The nodes in the toolbox (ALWAYS REQUIRED)
-     * @param {Number} toolboxW The width of the toolbox (>= 100 for no toolbox: contextmenu instead)
+     * @param {string | null} startNId Start node ID (on what node your code will start on) (default: null | block: "\_\_start\_\_")
+     * @param {LineBloxConfig | null} config Configuration for LineBlox (default: null | new default config)
      */
-    constructor(startNId = null, top = 0, left = 0, right = 0, tbNodes = [], toolboxW = 0){
-        const canvasTop = top;
-        const canvasLeft = left;
+    constructor(startNId = null, config = null){
+        //config readings
+        let c = config ?? new LineBloxConfig();
+        let top = c.offsets.top;
+        let left = c.offsets.left;
+        let right = c.offsets.right;
+        let toolboxW = c.toolbox.toolboxW;
+        BNodes.toolbox = c.toolbox.tbNodes;
 
+        //continue init
         BNodes.inst = this;
 
-        BNodes.toolbox = tbNodes;
+        const canvasTop = top;
+        const canvasLeft = left;
 
         if(startNId) this.#startingBlock = startNId;
     
@@ -1151,46 +1248,45 @@ class LineBlox{
 
     //_escapeForStr currently does not work properly:
     //todo: try to fix _escapeForStr
+    //it might work now
     /**
      * [FOR BLOCKS] Escapes a string for code generation
      * @param {string} str String to replace with escape sequences
      * @returns {string} Escaped string
      */
     static _escapeForStr(str){
-        if(str == null || str == undefined || typeof str !== "string") return "";
+        if(str == null || str == undefined || typeof str !== "string") return str;
         
         const ignoreFirstLastStrSymbol = false;
+
+        function replace(str){
+            return str.replace(/\\/g, "\\\\")
+                .replace(/"/g, "\\\"")
+                .replace(/\n/g, "\\n")
+                .replace(/\r/g, "\\r")
+                .replace(/\t/g, "\\t");
+        }
 
         if(!ignoreFirstLastStrSymbol){
             const first = str[0] === '"' ? '"' : "";
             const last = str[str.length - 1] === '"' ? '"' : "";
-            const inner = str.slice(first ? 1 : 0, last ? -1 : str.length)
-                .replace(/\\/g, "\\\\")
-                .replace(/"/g, "\\")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\r")
-                .replace(/\t/g, "\\t");
-            return first + inner + last;
+            const inner = str.slice(first ? 1 : 0, last ? -1 : str.length);
+            const inner2 = replace(inner);
+            return first + inner2 + last;
         }else{
-            return str
-                .replace(/\\/g, "\\\\")
-                .replace(/"/g, "\\")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\r")
-                .replace(/\t/g, "\\t");
+            return replace(str);
         }
     }
 
     /**
      * Can be used for node-internal system for string-checks.
-     * @param {String} v The string that will be checked
-     * @param {boolean} isNum If the string is a number
+     * @param {String} str The string that will be checked
      * @returns 
      */
-    static _wrapStr(v){
-        if(typeof str !== "string") return v;
-        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) return v;
-        return `"${v}"`;
+    static _wrapStr(str){
+        if(typeof str !== "string") return str;
+        if((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) return str;
+        return `"${str}"`;
     }
 
     /**
