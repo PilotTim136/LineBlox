@@ -54,4 +54,3 @@ By contributing, you help improve the tool for everyone.
 ## Thank You!
 
 Every contribution helps! By contributing, you agree that your changes will be licensed under the **MIT License**.
-

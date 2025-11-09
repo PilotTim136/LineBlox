@@ -9,15 +9,17 @@ const fs = require("fs");
 //////////////////////////
 
 //will generate like: "lineblox-1.0.0.js"
-const major = 1;
-const minor = 0;
-const patch = 0;
+const version = "1.2.0";
+
+const isBeta = false;
 
 //files (IN ORDER)
 const inputFiles = [
+    "js/editorConfig.js",
     "js/editor.js",
     "js/node.js",
     "js/nodeHelper.js",
+    "js/plugin.js",
     "js/scrollbar.js",
     "js/toolbox.js"
 ];
@@ -43,4 +45,9 @@ for(const f of inputFiles){
     code += content + "\n";
 }
 
-fs.writeFileSync(`versions/lineblox-${major}.${minor}.${patch}.js`, code);
+const betaStr = isBeta ? "-BETA" : "";
+
+fs.writeFileSync(`versions/lineblox-${version}${betaStr}.js`, code);  //set version numbers
+console.log(`Created: ${version}${betaStr}`);
+fs.writeFileSync(`versions/lineblox-latest${betaStr}.js`, code);      //make this latest version
+console.log(`Created: latest${betaStr}`);

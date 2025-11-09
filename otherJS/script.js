@@ -57,4 +57,13 @@ const tb = [
     }
 ];
 
-const LBInst = new LineBlox(null, 40, 0, 0, tb, 300);
+const config = new LineBloxConfig();
+config.offsets.left = 0;
+config.offsets.right = 0;
+config.offsets.top = 40;
+
+config.toolbox.tbNodes = tb;
+config.toolbox.toolboxW = 300;
+
+const LBInst = new LineBlox(null, config);
+await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");

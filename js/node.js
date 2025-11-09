@@ -22,6 +22,10 @@ class BNode{
     #w = 200;
     #h = 0;
 
+    plugin = null;
+    pluginPath = null;
+    pluginUuid = null;
+
     #mutators = {
         state: {
             inputs: {
@@ -774,11 +778,12 @@ class BNode{
      * @param {Number} y
      * @param {Number} width
      * @param {LineBlox} instance Where to store & read the current node
-     * @param {Number | undefined} uuid Recommended to leave empty!
-     * @param {Boolean} isClone Recommended to leave empty!
+     * @param {Number | undefined} uuid Recommended to leave undefined!
+     * @param {Boolean} isClone Recommended to leave false!
+     * @param {string | null} pluginUUID To what plugin this node belongs to
      */
     constructor(name, intName, inputs, outputs, x = 0, y = 0, col = "#eb8634", width = 200,
-        instance = LBInst, mutatorJSON = {}, alwaysGen = false, uuid = undefined, isClone = false){
+        instance = LBInst, mutatorJSON = {}, alwaysGen = false, uuid = undefined, isClone = false, pluginUUID = null){
 
         if(!Array.isArray(inputs) || !Array.isArray(outputs)) throw new Error("Inputs or Outputs is not an array! Stopping node creation.");
         if(!inputs.every(i => i instanceof NodeIOHandle)) throw new TypeError("All inputs must be NodeIOHandle");
@@ -794,6 +799,7 @@ class BNode{
         this.#inst = instance;
         this.#na = instance.nodes;
         this.#w = width;
+        this.pluginUuid = pluginUUID;
 
         this.#mutators.internalJson = mutatorJSON;
         if(mutatorJSON.inputs) this.#mutators.hasInputMut = true;

@@ -1,0 +1,16 @@
+//NOTE: If your site allows uploading for plugins (sharing plugins), please make sure you know the file path/URL to those plugins,
+//as you will have to define them.
+
+//NOTE: When you dynamically do this, please don't use "fetch `js/nodes/plugins/pluginDef.jsonc`", 
+//because this is just an example, and your plugins should be loaded dynamically if uploading is the case.
+
+//please also use normal JSON instead of JSONc. This is a JSONc format, to properly explain functionality and the
+//use case for this file.
+
+[
+    {
+        "uuid": "lb_njs",
+        "file": "nodeJS"    //NOTE: Since you're already defining plugin-paths on startup of LineBlox,
+                            //you will not have to add "js/nodes/..." here. LineBlox will do that automatically.
+    }
+]

@@ -1,82 +1,17 @@
-let BNodes = {blocks: [], toolbox: {}};
+let BNodes = {blocks: [], toolbox: {}, inst: null};
 
 class LineBlox{
+    //VARIABLES
+    //#region uncategorized (fancydraw, nodes, connected, startblock, ...)
+
     #canvas;
     #ctx;
     #startingBlock = "__start__";
-
-    #mouseX = 0;
-    #mouseY = 0;
-    #mouseDown = false;
-    #dragging = false;
-    /** @type {BNode | null} */
-    draggingNode = null;
-    /** @type {Object | null} */
-    draggingNodePoint = null;
-    /** @type {Object | null} */
-    #prevDraggingNodePoint = null;
-
-    draggingScrollbarX = false;
-    draggingScrollbarY = false;
-
-    #xOffset = 0;
-    #xnOffset = 0;
-    #yOffset = 0;
-    #tbTotalOffset = 0;
-
     #frame = 0;
 
-    scrollX = 0;
-    scrollY = 0;
-    scrollBarX = 0;
-    scrollBarY = 0;
-    scrollBarXOffset = 0;
-    scrollBarYOffset = 0;
-
-    scrollIntensityX = 1;
-    scrollIntensityY = 1;
-
-    interacted = false;
-
-    /** @type {Function} Callback when draw() was called */
-    updateCallback = null;
-
-    toolbox = {
-        usingTB: false,
-        /** @type {HTMLCanvasElement} */
-        canvas: null,
-        /** @type {CanvasRenderingContext2D} */
-        ctx: null,
-        size: { x: 0, y: 0 },
-        mousePos: { x: 0, y: 0 },
-        clickedFrame: false,
-        selected: -1,
-        draggingNodeID: null,
-        scrollBarY: 0,
-        draggingScrollbarY: false,
-        scrollBarYOffset: 0,
-        scrollY: 0
-    };
-
-    get mouseX(){ return this.#mouseX }
-    get mouseY(){ return this.#mouseY }
-    get mouseDown(){ return this.#mouseDown }
-    get dragging(){ return this.#dragging }
-    get prevDraggingNodePoint(){ return this.#prevDraggingNodePoint }
-    get ctx(){ return this.#ctx }
-    get yOffset(){ return this.#yOffset }
-    get xOffset(){ return this.#xOffset }
-    get xnOffset(){ return this.#xnOffset }
-    get canvas(){ return this.#canvas }
-    get tbOffset(){ return this.#tbTotalOffset }
-
-    IsMouseAvailable(){
-        return this.#mouseDown && !(this.draggingNode || this.draggingNodePoint || this.#dragging || this.interacted || this.#dragBg);
-    }
-
     #htmlctx = null;
-
     connected = false;
+    interacted = false;
 
     /** FancyDraw settings - used for nice visuals
      * 
@@ -95,110 +30,245 @@ class LineBlox{
         }
     };
 
-
     /** @type {Array<BNode>} */
     nodes = [];
 
-    static drawDragNode(ctx, node, largestW, cy, inst, fontSize = 15, lw = 0, centerNode = false, x){
-        let w = lw != 0 ? (node.width > lw ? lw : node.width) : node.width;
-        let h = 30;
-        let offsetY = 0;
-        let maxIO = Math.max(node.inputs.length, node.outputs.length);
-        h = h + 5 + maxIO * 15;
-        let _x = largestW + 10 + (centerNode ? (x - largestW - 20 - w)/2 : 0);
+    #pluginDefs = [];
 
-        const rounding = 5;
-        ctx.fillStyle = node.color;
-        if(inst.fancyDraw.nodes){
-            if(inst.fancyDraw.nodeHead.gradients){
-                const grad = ctx.createRadialGradient(_x, cy, w, _x, cy, 5);
-                grad.addColorStop(1, node.color);
-                grad.addColorStop(0, ColUtil.darkenColor(node.color, inst.fancyDraw.nodeHead.darkerAmount ?? 40));
-                ctx.fillStyle = grad;
-            }
-            ctx.beginPath();
-            ctx.roundRect(_x, cy, w, 20, [rounding, rounding, 0, 0]);
-            ctx.fill();
+    //#endregion
 
-            ctx.beginPath();
-            ctx.globalAlpha = 0.5;
-            ctx.roundRect(_x, cy + 20, w, h - 20, [0, 0, rounding, rounding]);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }else ctx.fillRect(_x, cy, w, h);
-        ctx.fillStyle = "white";
+    //#region mouseEvents
 
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = "white";
-        ctx.font = "15px Sans-Serif";
-        ctx.fillText(node.name, _x + w / 2, cy + 5, w);
+    #mouseX = 0;
+    #mouseY = 0;
+    #mouseDown = false;
+    #dragging = false;
+    /** @type {BNode | null} */
+    draggingNode = null;
+    /** @type {Object | null} */
+    draggingNodePoint = null;
+    /** @type {Object | null} */
+    #prevDraggingNodePoint = null;
 
-        offsetY = 0;
-        for(let input of node.inputs){
-            const by = cy + 30 + offsetY;
+    //#endregion
 
-            ctx.font = fontSize + "px Sans-Serif";
-            ctx.textAlign = "left";
-            ctx.textBaseline = "middle";
-            ctx.fillText(`${input.name}`, _x + 10, by, w / 2);
+    //#region scrollbars
+    
+    draggingScrollbarX = false;
+    draggingScrollbarY = false;
 
-            if(input.type == "Connect") BNode._drawTriangle(ctx, _x + 1, by - 5.5, 11);
-            else{
-                ctx.beginPath();
-                ctx.arc(_x, by, 5, 0, 2 * Math.PI);
-                ctx.fill();
-            }
+    scrollX = 0;
+    scrollY = 0;
+    scrollBarX = 0;
+    scrollBarY = 0;
+    scrollBarXOffset = 0;
+    scrollBarYOffset = 0;
+    scrollIntensityX = 1;
+    scrollIntensityY = 1;
 
-            offsetY += 15;
-        }
+    //#endregion
 
-        offsetY = 0;
-        for(let output of node.outputs){
-            const nx = _x + w - 10;
-            const by = cy + 30 + offsetY;
+    //#region offsets
 
-            if(output.hideInput) continue;
-            if(output.type == "Connect") BNode._drawTriangle(ctx, nx + 11, by - 5.5, 11);
-            else{
-                ctx.beginPath();
-                ctx.arc(nx + 10, by, 5, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            
-            ctx.font = fontSize + "px Sans-Serif";
-            ctx.textAlign = "right";
-            ctx.textBaseline = "middle";
-            const text = `${output.name} ${(output.type !== "Any" && output.type !== "Connect" && output.intergrated) ? "(" + output.type + ")" : ""}`;
-            ctx.fillText(text, nx, by, w / 2);
+    #xOffset = 0;
+    #yOffset = 0;
+    #xnOffset = 0;
 
-            offsetY += 15;
-        }
-        return h;
+    //#endregion
+
+    //#region plugin system
+
+    #supportPluginSystem = false;
+    #pluginPath = null;
+
+    #allowPlugin(){
+        if(this.#supportPluginSystem) return true;
+        console.warn("Plugins cannot be initialized. Plugins are not supported in this workspace.");
+        return false;
     }
 
-    drawGrid(){
-        const gridSize = 30;
-        const step = gridSize * 1;
-
-        this.#ctx.strokeStyle = "#555"; 
-        this.#ctx.lineWidth = 1;
-
-        for(let x = (-this.scrollBarX * this.scrollIntensityX) % step; x < this.#canvas.width; x += step){
-            this.#ctx.beginPath();
-            this.#ctx.moveTo(x, 0);
-            this.#ctx.lineTo(x, this.#canvas.height);
-            this.#ctx.stroke();
+    #internalPlgn = {
+        loadedPlugins: [],
+        queue: [],
+        initPlugin: (plugin) => {
+            this.#internalPlgn.loadedPlugins.push(plugin);
+            plugin.Init(this);
         }
+    };
 
-        for(let y = (-this.scrollBarY * this.scrollIntensityY) % step; y < this.#canvas.height; y += step){
-            this.#ctx.beginPath();
-            this.#ctx.moveTo(0, y);
-            this.#ctx.lineTo(this.#canvas.width, y);
-            this.#ctx.stroke();
+    #plugin = {
+        /** @param {LBPlugin} plugin */
+        addPlugin: (plugin) => {
+            if(!this.#allowPlugin()) return;
+            this.#internalPlgn.queue.push(plugin);
+        },
+        /** @param {LBPlugin} plugin */
+        removePlugin: (plugin) => {
+            //nodes
+            this.#internalPlgn.loadedPlugins = this.#internalPlgn.loadedPlugins.filter(p => p !== plugin);
+            for(let node of BNodes.blocks.filter(n => (n.plugin ?? "") === plugin.name)){
+                BNodes.blocks = BNodes.blocks.filter(n => n !== node);
+            }
+            //categories
+            console.log(BNodes.toolbox);
+            for(let cat of BNodes.toolbox.filter(c => c.plugin ?? "" === plugin.name)){
+                BNodes.toolbox = BNodes.toolbox.filter(c => c !== cat);
+            }
+            plugin.Remove();
+        },
+        getPlugins: () => {
+            return [...this.#internalPlgn.loadedPlugins];
+        }
+    };
+
+    /**
+     * Defines a new node for the global node list
+     * @param {Object} node Node definition
+     * @param {LBPlugin} plugin Name of the plugin defining the node (for removal if node removed)
+     */
+    DefineNewPluginNode(node, plugin){
+        if(!this.#allowPlugin()) return;
+        if(node.internalID == null || node.internalID === ""){
+            console.warn("Node internalID cannot be null (" + node.name + ")");
+            return;
+        }
+        const exists = BNodes.blocks.find(b => b.internalID === node.internalID);
+        if(exists){
+            console.warn("Node with internalID '" + node.internalID + "' already exists! (" + node.name + ")");
+            return;
+        }
+        node.plugin = plugin.name;
+        node.pluginUuid = plugin.uuid;
+        BNodes.blocks.push(node);
+    }
+
+    get plugin(){ return this.#plugin }
+
+    /** WARNING! This will remove all currently loaded plugins and re-initialize them! */
+    InitializePlugins(){
+        if(!this.#allowPlugin()) return;
+        for(const plgn of this.#internalPlgn.loadedPlugins) plgn.Remove();
+        this.#internalPlgn.loadedPlugins = [];
+
+        const plugins = this.#internalPlgn.queue;
+        const pluginMap = new Map();
+        plugins.forEach(p => pluginMap.set(p.name, p));
+
+        const visited = new Set();
+        const stack = new Set();
+
+        const load = (plgn) => {
+            if(visited.has(plgn.name)) return;
+            if(stack.has(plgn.name)){
+                console.error(`Cyclic dependency detected for plugin: ${plgn.name}`);
+                return;   
+            }
+
+            stack.add(plgn.name);
+
+            for(const depName of plgn.dependencies) {
+                const dep = pluginMap.get(depName);
+                if(!dep){
+                    console.warn(`Dependency not found: ${depName} for plugin: ${plgn.name}`);
+                    continue;
+                }
+                load(dep);
+            }
+
+            stack.delete(plgn.name);
+            visited.add(plgn.name);
+            this.#internalPlgn.initPlugin(plgn);
+        };
+
+        for(const plgn of plugins){
+            load(plgn);
         }
     }
 
+    /**
+     * @param {string} plugin The plugin to find and add
+    */
+    async #FindAndAddPlugin(plugin){
+        //init checks
+        if(this.#pluginPath == null || this.#pluginPath == ""){
+            console.warn("cannot add plugin: pluginPath is null or empty");
+            return;
+        }
+        if(plugin == null || plugin == ""){
+            console.warn("cannot add plugin: plugin is null or empty");
+            return;
+        }
+
+        await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = `${this.#pluginPath}${plugin}.js`;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error("Failed to load plugin: " + plugin));
+            document.head.appendChild(s);
+        });
+    }
+
+    /**
+     * This is a seperate function, because async
+     */
+    async #LoadPluginHandle(plgns){
+        try{
+            await Promise.all(plgns.map(plugin => this.#FindAndAddPlugin(plugin)));
+            this.InitializePlugins();
+        }catch(e){
+            throw new Error("Failed to load plugins: " + e);
+        }
+    }
+
+    //#endregion
+
+    //#region callbacks
+
+    /** @type {Function} Callback when draw() was called */
+    updateCallback = null;
+
+    //#endregion
+
+    //#region toolbox
+
+    #tbTotalOffset = 0;
+    toolbox = {
+        usingTB: false,
+        /** @type {HTMLCanvasElement} */
+        canvas: null,
+        /** @type {CanvasRenderingContext2D} */
+        ctx: null,
+        size: { x: 0, y: 0 },
+        mousePos: { x: 0, y: 0 },
+        clickedFrame: false,
+        selected: -1,
+        draggingNodeID: null,
+        scrollBarY: 0,
+        draggingScrollbarY: false,
+        scrollBarYOffset: 0,
+        scrollY: 0
+    };
+
+    //#endregion
+
+    //#region getters
+    
+    get mouseX(){ return this.#mouseX }
+    get mouseY(){ return this.#mouseY }
+    get mouseDown(){ return this.#mouseDown }
+    get dragging(){ return this.#dragging }
+    get prevDraggingNodePoint(){ return this.#prevDraggingNodePoint }
+    get ctx(){ return this.#ctx }
+    get yOffset(){ return this.#yOffset }
+    get xOffset(){ return this.#xOffset }
+    get xnOffset(){ return this.#xnOffset }
+    get canvas(){ return this.#canvas }
+    get tbOffset(){ return this.#tbTotalOffset }
+    get pluginDefinitions(){ return this.#pluginDefs }
+
+    //#endregion
+
+    //#region unused (currently)
     //for the broken code
     //currently unused
     #dragBgX = 0;
@@ -206,21 +276,10 @@ class LineBlox{
     #dragSSX = 0;   //dragScrollStartX
     #dragSSY = 0;   //dragScrollStartY
     #dragBg = false;
+    //#endregion
 
-    /**
-     * Can be used for node-internal system for string-checks.
-     * @param {String} v The string that will be checked
-     * @param {boolean} isNum If the string is a number
-     * @returns 
-     */
-    static wrapStr(v, isNum){
-        if(v === undefined || v === null) return undefined; 
-        if(isNum) return v;
-        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))){
-            return v;
-        }
-        return `"${v}"`;
-    }
+    //FUNCTIONS
+    //#region drawing
 
     drawLoop = (execReqFrame = false) => {
         const ctx = this.#ctx;
@@ -303,21 +362,138 @@ class LineBlox{
             requestAnimationFrame(this.drawLoop);
     }
 
-    #getMousePosition(event) {
-        let rect = this.#canvas.getBoundingClientRect();
-        this.#mouseX = event.clientX - rect.left;
-        this.#mouseY = event.clientY - rect.top;
-    }
-
+    /**
+     * This will create the node onto the workspace
+     * @param {Object} node Node definition
+     * @param {Boolean} clone Whether or not the node is a clone
+     * @returns 
+     */
     generateNode(node, clone = false){
         let inputs = node.inputs.map(h => new NodeIOHandle(h.name, h.dName ?? null, h.code ?? null, h.values, h.display, h.type ?? "Any",
             h.integrated ?? false, h.hideInput ?? false, h.inputWidth ?? 0, h.ignoreText ?? false));
         let outputs = node.outputs.map(h => new NodeIOHandle(h.name, h.dName ?? null, h.code ?? null, h.values,h.display, h.type ?? "Any",
             h.integrated ?? false, h.hideInput ?? false, h.inputWidth ?? 0, h.ignoreText ?? false));
 
-        return new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
+        const n = new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
             this.#mouseY + this.scrollBarY * this.scrollIntensityY, node.color ?? "#eb8634", node.width ?? 200, this,
-            node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false);
+            node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false, node.pluginUuid);
+        n.plugin = node.plugin;
+        n.pluginPath = node.pluginPath;
+        return n;
+    }
+
+    drawGrid(){
+        const gridSize = 30;
+        const step = gridSize * 1;
+
+        this.#ctx.strokeStyle = "#555"; 
+        this.#ctx.lineWidth = 1;
+
+        for(let x = (-this.scrollBarX * this.scrollIntensityX) % step; x < this.#canvas.width; x += step){
+            this.#ctx.beginPath();
+            this.#ctx.moveTo(x, 0);
+            this.#ctx.lineTo(x, this.#canvas.height);
+            this.#ctx.stroke();
+        }
+
+        for(let y = (-this.scrollBarY * this.scrollIntensityY) % step; y < this.#canvas.height; y += step){
+            this.#ctx.beginPath();
+            this.#ctx.moveTo(0, y);
+            this.#ctx.lineTo(this.#canvas.width, y);
+            this.#ctx.stroke();
+        }
+    }
+
+    static drawDragNode(ctx, node, largestW, cy, inst, fontSize = 15, lw = 0, centerNode = false, x){
+        let w = lw != 0 ? (node.width > lw ? lw : node.width) : node.width;
+        let h = 30;
+        let offsetY = 0;
+        let maxIO = Math.max(node.inputs.length, node.outputs.length);
+        h = h + 5 + maxIO * 15;
+        let _x = largestW + 10 + (centerNode ? (x - largestW - 20 - w)/2 : 0);
+
+        const rounding = 5;
+        ctx.fillStyle = node.color;
+        if(inst.fancyDraw.nodes){
+            if(inst.fancyDraw.nodeHead.gradients){
+                const grad = ctx.createRadialGradient(_x, cy, w, _x, cy, 5);
+                grad.addColorStop(1, node.color);
+                grad.addColorStop(0, ColUtil.darkenColor(node.color, inst.fancyDraw.nodeHead.darkerAmount ?? 40));
+                ctx.fillStyle = grad;
+            }
+            ctx.beginPath();
+            ctx.roundRect(_x, cy, w, 20, [rounding, rounding, 0, 0]);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.globalAlpha = 0.5;
+            ctx.roundRect(_x, cy + 20, w, h - 20, [0, 0, rounding, rounding]);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }else ctx.fillRect(_x, cy, w, h);
+        ctx.fillStyle = "white";
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = "white";
+        ctx.font = "15px Sans-Serif";
+        ctx.fillText(node.name, _x + w / 2, cy + 5, w);
+
+        offsetY = 0;
+        for(let input of node.inputs){
+            const by = cy + 30 + offsetY;
+
+            ctx.font = fontSize + "px Sans-Serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${input.name}`, _x + 10, by, w / 2);
+
+            if(input.type == "Connect") BNode._drawTriangle(ctx, _x + 1, by - 5.5, 11);
+            else{
+                ctx.beginPath();
+                ctx.arc(_x, by, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            offsetY += 15;
+        }
+
+        offsetY = 0;
+        for(let output of node.outputs){
+            const nx = _x + w - 10;
+            const by = cy + 30 + offsetY;
+
+            if(output.hideInput) continue;
+            if(output.type == "Connect") BNode._drawTriangle(ctx, nx + 11, by - 5.5, 11);
+            else{
+                ctx.beginPath();
+                ctx.arc(nx + 10, by, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            ctx.font = fontSize + "px Sans-Serif";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const text = `${output.name} ${(output.type !== "Any" && output.type !== "Connect" && output.intergrated) ? "(" + output.type + ")" : ""}`;
+            ctx.fillText(text, nx, by, w / 2);
+
+            offsetY += 15;
+        }
+        return h;
+    }
+
+    //#endregion
+
+    //#region mouse handling
+
+    #getMousePosition(event) {
+        let rect = this.#canvas.getBoundingClientRect();
+        this.#mouseX = event.clientX - rect.left;
+        this.#mouseY = event.clientY - rect.top;
+    }
+
+    IsMouseAvailable(){
+        return this.#mouseDown && !(this.draggingNode || this.draggingNodePoint || this.#dragging || this.interacted || this.#dragBg);
     }
 
     callCtxMenu(e, prevCon = null, clickedNode = null){
@@ -436,6 +612,10 @@ class LineBlox{
         if(e) ctxc.addEventListener("contextmenu", (e) => e.preventDefault());
         this.#htmlctx = ctxc;
     }
+
+    //#endregion
+
+    //#region workspace manipulation & code execution
 
     GenerateCodeFromNode(node, currentCursive = 0){
         /** @param {BNode} node */
@@ -631,78 +811,72 @@ class LineBlox{
      * @returns Workspace nodes (<inst>.nodes)
      */
     GetWorkspace(){
-        const nodes = [];
+        const ws = {
+            plugins: [],
+            nodes: []
+        };
+        const add = (h) => {
+            return {
+                name: h.name,
+                dName: h.dName ?? h.name,
+                type: h.type,
+                value: h.value,
+                ...(h.display ? {display: h.display} : {}),
+                ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
+                ...(h.values ? {values: h.values} : {}),
+                ...(h.display != "" ? {display: h.display} : {}),
+                ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
+                ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
+                ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
+                ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
+                connection: h.connection ? {
+                    fromName: h.connection.fromName ?? "",
+                    toName: h.connection.toName ?? "",
+                    fromUUID: h.connection.from?.uuid ?? "",
+                    toUUID: h.connection.to?.uuid ?? "",
+                    code: null
+                } : null
+            };
+        }
         for(let node of this.nodes){
-            const nodeJson = {
+            const nj = {
                 uuid: node.uuid,
                 internalName: node.internalName,
+                ...(node.pluginUuid != null ? {plugin: node.pluginUuid} : {}),
                 x: node.x,
                 y: node.y,
-                inputs: node.inputs.map(h => ({
-                    name: h.name,
-                    dName: h.dName ?? h.name,
-                    type: h.type,
-                    value: h.value,
-                    ...(h.display ? {display: h.display} : {}),
-                    ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
-                    ...(h.values ? {values: h.values} : {}),
-                    ...(h.display != "" ? {display: h.display} : {}),
-                    ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
-                    ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
-                    ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
-                    ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
-                    connection: h.connection ? {
-                        fromName: h.connection.fromName ?? "",
-                        toName: h.connection.toName ?? "",
-                        fromUUID: h.connection.from?.uuid ?? "",
-                        toUUID: h.connection.to?.uuid ?? "",
-                        code: null
-                    } : null
-                })),
-                outputs: node.outputs.map(h => ({
-                    name: h.name,
-                    dName: h.dName ?? h.name,
-                    type: h.type,
-                    value: h.value,
-                    ...(h.display ? {display: h.display} : {}),
-                    ...(h.integratedInput ? {integrated: h.integratedInput} : {}),
-                    ...(h.values ? {values: h.values} : {}),
-                    ...(h.display != "" ? {display: h.display} : {}),
-                    ...(h.hideInput != false ? {hideInput: h.hideInput} : {}),
-                    ...(h.inputWidth != 0 ? {inputWidth: h.inputWidth} : {}),
-                    ...(h.ignoreText != false ? {ignoreText: h.ignoreText} : {}),
-                    ...(h.isMutated != false ? {isMutated: h.isMutated} : {}),
-                    connection: h.connection ? {
-                        fromName: h.connection.fromName ?? "",
-                        toName: h.connection.toName ?? "",
-                        fromUUID: h.connection.from?.uuid ?? "",
-                        toUUID: h.connection.to?.uuid ?? "",
-                        code: null
-                    } : null
-                }))
+                inputs: node.inputs.map(add),
+                outputs: node.outputs.map(add)
             };
-            console.log(nodeJson.outputs);
-            nodes.push(nodeJson);
+            ws.nodes.push(nj);
+            console.log("saving:", nj, "pluginUUID:", node.pluginUuid ?? "<noUuid>", "/", nj.pluginUuid ?? "<noUuid>");
+            if(node.pluginUuid != null && !ws.plugins.includes(node.pluginUuid)) ws.plugins.push(node.pluginUuid);
         }
-        return nodes;
+        return ws;
     }
 
     /**
      * Sets the workspace from the given json
-     * @param {Array<BNode> | string} w Workspace json (or workspace STRING)
+     * @param {Object | string} w Workspace json (or workspace STRING)
      */
-    SetWorkspace(w){
+    async SetWorkspace(w){
         //for IntelliSense
-        /** @type {Array<BNode>} */
-        let ws = [];
+        let gws = {};
         if(typeof w === "string"){
-            ws = JSON.parse(w);
-        }else if(Array.isArray(w)){
-            ws = w;
+            gws = JSON.parse(w);
+        }else if(typeof w === "object"){
+            gws = w;
         }else{
             console.warn("no valid format! (" + typeof w + ")");
             return;
         }
+
+        /** @type {Array<BNode>} */
+        let ws = gws.nodes;
+
+        //load plugins
+        console.log("loading plugins:", gws.plugins);
+        if(this.#supportPluginSystem) await this.#LoadPluginHandle(gws.plugins);
 
         const nodeMap = {};
 
@@ -718,6 +892,10 @@ class LineBlox{
             let inputs = [];
             let outputs = [];
             const jn = BNodes.blocks.find(n => n.internalID === node.internalName);
+            if(jn == null){
+                console.error("node is undefined or null");
+                continue;
+            }
 
             for(let h of node.inputs){
                 const n = createNodeIOHandle(h);
@@ -729,13 +907,21 @@ class LineBlox{
                 n.value = h.value;
                 outputs.push(n);
             }
-            const newNode = new BNode(jn.name, node.internalName, inputs, outputs,
-                node.x, node.y, jn.color, jn.width, this, jn.mutators ?? {}, jn.alwaysGenerate, node.uuid);
-            nodeMap[node.uuid] = newNode;
+            try{
+                const newNode = new BNode(jn.name, node.internalName, inputs, outputs,
+                    node.x, node.y, jn.color, jn.width, this, jn.mutators ?? {}, jn.alwaysGenerate, node.uuid);
+                nodeMap[node.uuid] = newNode;
+            }catch(e){
+                console.error("Error creating node:", e, jn);
+            }
         }
 
         for(let node of ws){
             const n = this.nodes.find(n => n.uuid == node.uuid);
+            if(n == null){
+                console.error("node is undefined or null");
+                continue;
+            }
             const bn = BNodes.blocks.find(b => b.internalID === n.internalName);
 
             n.inputs.forEach((inp, i) => {
@@ -801,6 +987,7 @@ class LineBlox{
         return null;
     }
 
+    //todo: remove this function
     ExecuteCode(){
         const code = this.GenerateCode();
         console.log("========EXEC START========");
@@ -811,20 +998,137 @@ class LineBlox{
         }
         console.log("=========EXEC END=========");
     }
+    //#endregion
+
+    //#region toolbox manipulation
+
+    /**
+     * This dynamically adds a category to the toolbox
+     * @param {string} name Category name
+     * @param {string | null} color Category color
+     * @param {Array | null} nodes Category nodes (internalIDs)
+     * @param {string | null} plgnName Plugin name for category. Please leave empty manually.
+     */
+    AddCategoryToToolbox(name, color = null, nodes = null, plgnName = null){
+        if(BNodes.toolbox.find(c => c.category === name)){
+            console.warn(`Category "${name}" already exists in the toolbox!`);
+            return;
+        }
+        BNodes.toolbox.push({
+            category: name,
+            ...(plgnName != null ? {plugin: plgnName} : {}),
+            color: color ?? "rgba(207, 125, 2, 1)",
+            blocks: nodes ?? []
+        });
+    }
+
+    /**
+     * Adds a node to a category in the toolbox
+     * @param {string} category Category name
+     * @param {string | Array} nodeInternalID If string, adds single node, if array adds multiple nodes
+     */
+    AddNodeToCategory(category, nodeiID){
+        const cat = BNodes.toolbox.find(c => c.category === category);
+        if(!cat){
+            console.warn(`Category "${category}" does not exist in the toolbox!`);
+            return;
+        }
+        if(Array.isArray(nodeiID)){
+            for(const bID of nodeiID){
+                if(!cat.blocks.includes(bID))
+                    cat.blocks.push(bID);
+            }
+        }else{
+            if(!cat.blocks.includes(nodeiID))
+                cat.blocks.push(nodeiID);
+        }
+    }
+
+    /**
+     * Removes the entire category from the toolbox
+     * @param {string} category Category name
+     */
+    RemoveCategoryFromToolbox(category){
+        BNodes.toolbox = BNodes.toolbox.filter(c => c.category !== category);
+    }
+
+    /**
+     * Removes the node from the given category in the toolbox
+     * @param {string} category Category name
+     * @param {string} nodeiID Node internal-ID from category
+     * @returns 
+     */
+    RemoveNodeFromCategory(category, nodeiID){
+        const cat = BNodes.toolbox.find(c => c.category === category);
+        if(!cat){
+            console.warn(`Category "${category}" does not exist in the toolbox!`);
+            return;
+        }
+        cat.blocks = cat.blocks.filter(bID => bID !== nodeiID);
+    }
+
+    /**
+     * Defines a new node for the global node list
+     * @param {Object} node Node definition
+     */
+    DefineNewNode(node){
+        if(node.internalID == null || node.internalID === ""){
+            console.warn("Node internalID cannot be null (" + node.name + ")");
+            return;
+        }
+        const exists = BNodes.blocks.find(b => b.internalID === node.internalID);
+        if(exists){
+            console.warn("Node with internalID '" + node.internalID + "' already exists! (" + node.name + ")");
+            return;
+        }
+        BNodes.blocks.push(node);
+    }
+
+    //#endregion
+
+    //#region constructor & plugin init
+
+    /**
+     * Enables plugin support for this instance
+     * @param {string} path Path for the plugins
+     * @param {string} defPath Path for the plugin definitions
+     */
+    async EnablePluginSupport(path, defPath){
+        //for more informations on why this has to be done,
+        //please visit: "js/nodes/plugins/pluginDefs.jsonc"
+
+        if(path == null || defPath == null) return;
+        defPath = path + defPath;
+
+        const res = await fetch(defPath);
+        let j = await res.text();
+        if(defPath.endsWith(".jsonc"))
+            j = j.replace(/\/\/.*$/gm, "");
+        this.#pluginDefs = JSON.parse(j);
+
+        this.#supportPluginSystem = true;
+        this.#pluginPath = path;
+    }
 
     /**
      * Initializes and creates all the needed things for the node editor to run
-     * @param {string} startNId Start node ID (on what node your code will start on) | default: null (block: "\_\_start\_\_")
-     * @param {Number} top The y-offset the canvas should have (to put your UI on)
-     * @param {Number} left The x-offset the canvas should have (to put your UI on)
-     * @param {Array} toolboxW The nodes in the toolbox (ALWAYS REQUIRED)
-     * @param {Number} toolboxW The width of the toolbox (>= 100 for no toolbox: contextmenu instead)
+     * @param {string | null} startNId Start node ID (on what node your code will start on) (default: null | block: "\_\_start\_\_")
+     * @param {LineBloxConfig | null} config Configuration for LineBlox (default: null | new default config)
      */
-    constructor(startNId = null, top = 0, left = 0, right = 0, tbNodes = [], toolboxW = 0){
+    constructor(startNId = null, config = null){
+        //config readings
+        let c = config ?? new LineBloxConfig();
+        let top = c.offsets.top;
+        let left = c.offsets.left;
+        let right = c.offsets.right;
+        let toolboxW = c.toolbox.toolboxW;
+        BNodes.toolbox = c.toolbox.tbNodes;
+
+        //continue init
+        BNodes.inst = this;
+
         const canvasTop = top;
         const canvasLeft = left;
-
-        BNodes.toolbox = tbNodes;
 
         if(startNId) this.#startingBlock = startNId;
     
@@ -938,21 +1242,64 @@ class LineBlox{
         this.drawLoop(true);
     }
 
+    //#endregion
+
+    //#region string manipulation
+
+    //_escapeForStr currently does not work properly:
+    //todo: try to fix _escapeForStr
+    //it might work now
     /**
      * [FOR BLOCKS] Escapes a string for code generation
      * @param {string} str String to replace with escape sequences
      * @returns {string} Escaped string
      */
-    static _escapeForStr(str) {
-        if (!str) return "";
-        const first = str[0] === '"' ? '"' : "";
-        const last = str[str.length - 1] === '"' ? '"' : "";
-        const inner = str.slice(first ? 1 : 0, last ? -1 : str.length)
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-        return first + inner + last;
+    static _escapeForStr(str){
+        if(str == null || str == undefined || typeof str !== "string") return str;
+        
+        const ignoreFirstLastStrSymbol = false;
+
+        function replace(str){
+            return str.replace(/\\/g, "\\\\")
+                .replace(/"/g, "\\\"")
+                .replace(/\n/g, "\\n")
+                .replace(/\r/g, "\\r")
+                .replace(/\t/g, "\\t");
+        }
+
+        if(!ignoreFirstLastStrSymbol){
+            const first = str[0] === '"' ? '"' : "";
+            const last = str[str.length - 1] === '"' ? '"' : "";
+            const inner = str.slice(first ? 1 : 0, last ? -1 : str.length);
+            const inner2 = replace(inner);
+            return first + inner2 + last;
+        }else{
+            return replace(str);
+        }
     }
+
+    /**
+     * Can be used for node-internal system for string-checks.
+     * @param {String} str The string that will be checked
+     * @returns 
+     */
+    static _wrapStr(str){
+        if(typeof str !== "string") return str;
+        if((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) return str;
+        return `"${str}"`;
+    }
+
+    /**
+     * This validates variable & function-proof names
+     * @param {string} str String to be parsed
+     * @returns 
+     */
+    static _validateVarStr(str){
+        if(typeof str !== "string") return str;
+        str = str.replace(/[^a-zA-Z0-9 äöü]+/g, "")
+            .replaceAll(" ", "_");
+        return str;
+    }
+
+    //#endregion
 }
