@@ -84,7 +84,7 @@ class LineBlox{
         queue: [],
         initPlugin: (plugin) => {
             this.#internalPlgn.loadedPlugins.push(plugin);
-            plugin.Init();
+            plugin.Init(this);
         }
     };
 
@@ -1015,7 +1015,7 @@ class LineBlox{
 
     //#endregion
 
-    //#region constructor & string manipulation
+    //#region constructor
 
     /**
      * Initializes and creates all the needed things for the node editor to run
@@ -1145,22 +1145,40 @@ class LineBlox{
         this.drawLoop(true);
     }
 
+    //#endregion
+
+    //#region string manipulation
+
+    //_escapeForStr currently does not work properly:
+    //todo: try to fix _escapeForStr
     /**
      * [FOR BLOCKS] Escapes a string for code generation
      * @param {string} str String to replace with escape sequences
      * @returns {string} Escaped string
      */
-    static _escapeForStr(str) {
-        if (!str) return "";
-        const first = str[0] === '"' ? '"' : "";
-        const last = str[str.length - 1] === '"' ? '"' : "";
-        const inner = str.slice(first ? 1 : 0, last ? -1 : str.length)
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, '\\n')
-            .replace(/\r/g, '\\r')
-            .replace(/\t/g, '\\t');
-        return first + inner + last;
+    static _escapeForStr(str){
+        if(str == null || str == undefined || typeof str !== "string") return "";
+        
+        const ignoreFirstLastStrSymbol = false;
+
+        if(!ignoreFirstLastStrSymbol){
+            const first = str[0] === '"' ? '"' : "";
+            const last = str[str.length - 1] === '"' ? '"' : "";
+            const inner = str.slice(first ? 1 : 0, last ? -1 : str.length)
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, "\\")
+                .replace(/\n/g, "\\n")
+                .replace(/\r/g, "\\r")
+                .replace(/\t/g, "\\t");
+            return first + inner + last;
+        }else{
+            return str
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, "\\")
+                .replace(/\n/g, "\\n")
+                .replace(/\r/g, "\\r")
+                .replace(/\t/g, "\\t");
+        }
     }
 
     /**
@@ -1169,13 +1187,22 @@ class LineBlox{
      * @param {boolean} isNum If the string is a number
      * @returns 
      */
-    static wrapStr(v, isNum){
-        if(v === undefined || v === null) return undefined; 
-        if(isNum) return v;
-        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))){
-            return v;
-        }
+    static _wrapStr(v){
+        if(typeof str !== "string") return v;
+        if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) return v;
         return `"${v}"`;
+    }
+
+    /**
+     * This validates variable & function-proof names
+     * @param {string} str String to be parsed
+     * @returns 
+     */
+    static _validateVarStr(str){
+        if(typeof str !== "string") return str;
+        str = str.replace(/[^a-zA-Z0-9 äöü]+/g, "")
+            .replaceAll(" ", "_");
+        return str;
     }
 
     //#endregion

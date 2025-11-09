@@ -416,7 +416,7 @@ BNodes.blocks.push({
             inputWidth: 60,
             ignoreText: true,
             code: (data) => {
-                return `"${data.output["str"]}"`;
+                return `"${LineBlox._escapeForStr(data.output["str"])}"`;
             }
         }
     ]
@@ -445,12 +445,7 @@ BNodes.blocks.push({
             name: "out",
             type: "String",
             code: (data) => {
-                const i1 = data.input["in1"];
-                const i2 = data.input["in2"];
-                const i1Num = !Number.isNaN(Number(i1));
-                const i2Num = !Number.isNaN(Number(i2));
-
-                return `${LineBlox.wrapStr(i1, i1Num)} + ${LineBlox.wrapStr(i2, i2Num)}`;
+                return `${LineBlox._wrapStr(data.input["in1"])} + ${LineBlox._wrapStr(data.input["in2"])}`;
             }
         }
     ]
@@ -465,9 +460,7 @@ BNodes.blocks.push({
             name: "",
             type: "Connect",
             code: (data) => {
-                const msg = data.input["Message"];
-                const msgNum = Number.isNaN(Number(msg));
-                return `console.log(${LineBlox.wrapStr(msg, !msgNum)});\n`;
+                return `console.log(${LineBlox._wrapStr(data.input["Message"])});\n`;
             }
         },
         {
@@ -499,9 +492,7 @@ BNodes.blocks.push({
             name: "Value",
             type: "String",
             code: (data) => {
-                const msg = data.input["Message"];
-                const msgNum = Number.isNaN(Number(msg));
-                return `prompt(${LineBlox.wrapStr(msg, msgNum)})`;
+                return `prompt(${LineBlox._wrapStr(data.input["Message"])})`;
             }
         }
     ]
@@ -587,7 +578,7 @@ BNodes.blocks.push({
             type: "Connect",
             code: (data) => {
                 const v = data.input["Value"];
-                return `${data.input["type"]} ${data.input["Name"].replaceAll("\"", "")}${v != "\"\"" ? (" = " + v) : ""};\n`;
+                return `${data.input["type"]} ${LineBlox._validateVarStr(data.input["Name"])}${v != "\"\"" ? (" = " + v) : ""};\n`;
             }
         },
         {
@@ -636,8 +627,7 @@ BNodes.blocks.push({
             name: "",
             type: "Connect",
             code: (data) => {
-                const v = data.input["Value"];
-                return `${data.input["Name"].replaceAll("\"", "")} = ${v};\n`;
+                return `${LineBlox._validateVarStr(data.input["Name"])} = ${data.input["Value"]};\n`;
             }
         },
         {
@@ -686,7 +676,7 @@ BNodes.blocks.push({
             display: "Variable",
             type: ["Any", "Variable"],
             code: (data) => {
-                return `${data.input["Name"]}`;
+                return `${LineBlox._validateVarStr(data.input["Name"])}`;
             }
         }
     ]
@@ -703,7 +693,7 @@ BNodes.blocks.push({
             name: "",
             type: "Connect",
             code: (data) => {
-                const name = data.input["Name"].replaceAll("\"", "");
+                const name = LineBlox._validateVarStr(data.input["Name"]);
                 let params = "";
                 for(let _n in data.inputs){
                     if(!_n.startsWith("param")) continue;
@@ -711,7 +701,7 @@ BNodes.blocks.push({
                     params += (params != "" ? ", " : "") + value;
                 }
                 const func = data.output["func"] ?? "";
-                return `function ${name}(${params.replaceAll("\"", "")}){\n${func}}\n`;
+                return `function ${name}(${LineBlox._validateVarStr(params)}){\n${func}}\n`;
             }
         },
         {
@@ -789,7 +779,7 @@ BNodes.blocks.push({
             name: "",
             type: "Connect",
             code: (data) => {
-                const name = data.input["Name"].replaceAll("\"", "");
+                const name = LineBlox._validateVarStr(data.input["Name"]);
                 let params = "";
                 for(let _n in data.inputs){
                     if(!_n.startsWith("param")) continue;
@@ -850,7 +840,7 @@ BNodes.blocks.push({
             display: "Any",
             type: ["Any", "Variable"],
             code: (data) => {
-                const name = data.input["Name"];
+                const name = LineBlox._validateVarStr(data.input["Name"]);
                 let params = "";
                 for(let _n in data.inputs){
                     if(!_n.startsWith("param")) continue;
