@@ -64,7 +64,9 @@ const LBInst = new LineBlox(null, config);         //PARAMETERS:
                                                    //"null": What node the code will start one (node-ID, null = "__start__").
                                                    //"config": Configuration for the LineBlox instance
 
-await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc"); 
+(async () => {
+    await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+});
                            //PARAMETERS:
                            //"js/nodes/plugins/" -> path to the plugins
                            //"pluginDefs.jsonc" -> the defenition for the plugins (view "js/nodes/plugins/pluginDefs.jsonc" for more information

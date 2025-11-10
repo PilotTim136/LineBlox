@@ -41,9 +41,13 @@ In the previous step, all the definitions were in `pluginDefs.jsonc`.
 To allow a dynamic definition-JSON, please change this:
 ```javascript
 //from this
-await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+(async () => {
+    await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+});
 //to this
-await LBInst.EnablePluginSupport("js/nodes/plugins/", "<definition-endpoint>");
+(async () => {
+    await LBInst.EnablePluginSupport("js/nodes/plugins/", "<definition-endpoint>");
+});
 ```
 
 > **NOTE**: *\<definition-endpoint>* can be any endpoint you want. *definitions* is recommended.

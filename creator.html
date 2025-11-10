@@ -32,6 +32,7 @@
         <canvas id="nodeDraw" style="position: absolute; height: 200px; width: 200px;"></canvas>
     </div>
 
+    <script src="js/editorConfig.js"></script>
     <script src="js/editor.js"></script>
     <script src="js/toolbox.js"></script>
     <script src="js/scrollbar.js"></script>
@@ -87,8 +88,19 @@
             }
         ];
 
-        const LBInst = new LineBlox(null, 40, 0, 200, _tb, 300);
+        const config = new LineBloxConfig();
+        config.offsets.left = 0;
+        config.offsets.right = 200;
+        config.offsets.top = 40;
+
+        config.toolbox.tbNodes = _tb;
+        config.toolbox.toolboxW = 300;
+
+        const LBInst = new LineBlox(null, config);
         LBInst.updateCallback = () => draw();
+        (async () => {
+            await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+        });
     </script>
 
     <!-- syntax highlighting -->

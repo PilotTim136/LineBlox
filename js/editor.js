@@ -1118,11 +1118,11 @@ class LineBlox{
     constructor(startNId = null, config = null){
         //config readings
         let c = config ?? new LineBloxConfig();
-        let top = c.offsets.top;
-        let left = c.offsets.left;
-        let right = c.offsets.right;
-        let toolboxW = c.toolbox.toolboxW;
-        BNodes.toolbox = c.toolbox.tbNodes;
+        let top = c.offsets?.top ?? 0;
+        let left = c.offsets?.left ?? 0;
+        let right = c.offsets?.right ?? 0;
+        let toolboxW = c.toolbox?.toolboxW ?? 200;
+        BNodes.toolbox = c.toolbox?.tbNodes ?? [];
 
         //continue init
         BNodes.inst = this;
