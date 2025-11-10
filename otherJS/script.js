@@ -66,4 +66,6 @@ config.toolbox.tbNodes = tb;
 config.toolbox.toolboxW = 300;
 
 const LBInst = new LineBlox(null, config);
-await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+(async () => {
+    await LBInst.EnablePluginSupport("js/nodes/plugins/", "pluginDefs.jsonc");
+});
