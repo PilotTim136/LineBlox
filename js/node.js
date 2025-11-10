@@ -6,7 +6,8 @@ class BNode{
     /** @param {Array<NodeIOHandle>} */
     #outputs;
 
-    #alwaysGenerate = false;
+    /** @type {number} The priority where it will automatically be generated (0 = disabled | default) */
+    alwaysGenerate = 0;
 
     #uuid = 0;
     #stopExec = false;
@@ -57,7 +58,6 @@ class BNode{
     get height(){ return this.#h }
     get internalName(){ return this.#intName }
     get uuid(){ return this.#uuid }
-    get alwaysGenerate(){ return this.#alwaysGenerate }
     get mutatorState(){ return this.#mutators.state }
     get fullMutatorData(){ return this.#mutators }
 
@@ -195,7 +195,7 @@ class BNode{
         const out = this.#outputs.map(h => create(h));
 
         const node = new BNode(this.#name, this.#intName, inp, out,
-            this.#x + 30, this.#y + 30, this.color, this.#w, this.#inst, undefined, true);
+            this.#x + 30, this.#y + 30, this.color, this.#w, this.#inst, undefined, this.alwaysGenerate);
         return node;
     }
 
@@ -783,7 +783,7 @@ class BNode{
      * @param {string | null} pluginUUID To what plugin this node belongs to
      */
     constructor(name, intName, inputs, outputs, x = 0, y = 0, col = "#eb8634", width = 200,
-        instance = LBInst, mutatorJSON = {}, alwaysGen = false, uuid = undefined, isClone = false, pluginUUID = null){
+        instance = LBInst, mutatorJSON = {}, alwaysGen = 0, uuid = undefined, isClone = false, pluginUUID = null){
 
         if(!Array.isArray(inputs) || !Array.isArray(outputs)) throw new Error("Inputs or Outputs is not an array! Stopping node creation.");
         if(!inputs.every(i => i instanceof NodeIOHandle)) throw new TypeError("All inputs must be NodeIOHandle");
@@ -810,8 +810,7 @@ class BNode{
             }
         }
 
-        //ToDo: (somehow) make "#alwaysGenerate" always generate code, even if not connected to input-connection node
-        this.#alwaysGenerate = alwaysGen ?? false;
+        this.alwaysGenerate = alwaysGen ?? 0;
         if(uuid) this.#uuid = uuid;
         else this.#uuid = Date.now() + Math.random();
         if(isClone){

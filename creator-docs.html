@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <h1 style="text-align: center;">Welcome to the <code>NodeCreator 1.0</code> Documentation</h1>
+    <h1 style="text-align: center;">Welcome to the <code>NodeCreator 1.1</code> Documentation</h1>
     The Node Creator is a tool to create custom nodes for LineBlox Editor.<br><br>
 
     This tutorial contains multiple sections:<br>
@@ -45,9 +45,22 @@
 
     <h2 id="nodedata">Node Data</h2>
     To edit the node in the drawer, you will have to drag a "Node Data" node into the workspace, which looks like this:<br>
-    <img src="creator-docs/node-data.png" alt="default_node_data_node"><br>
+    <img src="creator-docs/node-data-1_1.png" alt="default_node_data_node"><br>
     This node allows you to set the basic data for the node you are creating, such as the name, color, width and so on.<br>
     You can either write your values directly into the white boxes (inputs) or connect other input-nodes to the circles on the left.<br><br>
+
+    <h4>Always Generate</h4>
+    AlwaysGenerate is a new property introduced in LineBlox 1.2.2-BETA (creator-1.1).<br>
+    AlwaysGenerate is great, when you want to have functions for example always generate before the <code>__start__</code> block.<br>
+    <h5>How To Use</h5>
+    You can use this property, by giving it a value.<br>
+    The default value for this property is <code>0</code>.<br>
+    The numbers decide, when to generate it in the code.<br>
+    For example, 0 = generate only if connected to another node (default behavior). Any positive number = always generate, with lower numbers generated first<br>
+    And any other value will be generated afterwards.<br>
+    For example, 1 will be generated before 2, while the start-node (__start__) will ALWAYS be generated last,
+        EXCEPT that also has an AlwaysGenerate value not set to 0.
+
     <hr>
 
     <h2 id="io">Input & Output</h2>

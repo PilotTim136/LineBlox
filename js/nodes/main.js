@@ -868,3 +868,33 @@ BNodes.blocks.push({
         }
     }
 });
+
+//Test
+BNodes.blocks.push({
+    name: "Start",
+    internalID: "__start2__",
+    color: "rgba(35, 146, 65, 1)",
+    width: 50,
+    alwaysGenerate: 1,
+    inputs: [],
+    outputs: [
+        {
+            name: "",
+            type: "Connect"
+        }
+    ]
+});
+BNodes.blocks.push({
+    name: "Start",
+    internalID: "__start3__",
+    color: "rgba(32, 129, 58, 1)",
+    width: 50,
+    alwaysGenerate: 2,
+    inputs: [],
+    outputs: [
+        {
+            name: "",
+            type: "Connect"
+        }
+    ]
+});

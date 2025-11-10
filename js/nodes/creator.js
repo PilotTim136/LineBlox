@@ -23,6 +23,8 @@ BNodes.blocks.push({
                 const col = _col == "" ? "\"rgba(255, 145, 0, 1)\"" : _col;
                 const _w = data.input["nodeWidth"];
                 const w = isNaN(parseInt(_w)) ? 100 : parseInt(_w);
+                const _ag = data.input["nodeAlwaysGen"];
+                const ag = isNaN(parseInt(_ag)) ? 0 : parseInt(_ag);
                 const inputs = data.input["nodeInputs"] ?? "";
                 const outputs = data.input["nodeOutputs"] ?? "";
                 
@@ -34,6 +36,7 @@ BNodes.blocks.push({
     internalID: ${iName},
     color: ${col},
     width: ${w},
+    alwaysGenerate: ${ag},
     inputs: [\n${inputs}],
     outputs: [\n${outputs}]
 });`;
@@ -62,6 +65,13 @@ BNodes.blocks.push({
         {
             name: "nodeWidth",
             dName: "Width",
+            type: "Number",
+            integrated: true,
+            inputWidth: 39
+        },
+        {
+            name: "nodeAlwaysGen",
+            dName: "Always Generate",
             type: "Number",
             integrated: true,
             inputWidth: 39

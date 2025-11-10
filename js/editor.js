@@ -376,9 +376,11 @@ class LineBlox{
 
         const n = new BNode(node.name, node.internalID, inputs, outputs, this.#mouseX + this.scrollBarX * this.scrollIntensityX,
             this.#mouseY + this.scrollBarY * this.scrollIntensityY, node.color ?? "#eb8634", node.width ?? 200, this,
-            node.mutators ?? {}, node.alwaysGenerate ?? false, undefined, clone ?? false, node.pluginUuid);
+            node.mutators ?? {}, null, undefined, clone ?? false, node.pluginUuid);
         n.plugin = node.plugin;
         n.pluginPath = node.pluginPath;
+
+        n.alwaysGenerate = node.alwaysGenerate;
         return n;
     }
 
@@ -686,9 +688,6 @@ class LineBlox{
                 }
             }
 
-            data.inputs = data.input;
-            data.outputs = data.output;
-
             const outObj = (node.outputs || []).find(o => o.name === outputName);
             if(!outObj) return "";
 
@@ -771,9 +770,6 @@ class LineBlox{
                 }
             }
 
-            givingCodeData.inputs = givingCodeData.input;
-            givingCodeData.outputs = givingCodeData.output;
-
             const code = incon ? (incon.code ? incon.code(givingCodeData) : "") : "";
 
             function indentCode(code, indentLevel) {
@@ -800,9 +796,18 @@ class LineBlox{
      * @returns {string}
      */
     GenerateCode(){
+        const alwaysNodes = this.nodes
+            .filter(n => n.alwaysGenerate && n.alwaysGenerate > 0)
+            .sort((a, b) => a.alwaysGenerate - b.alwaysGenerate);
+        
+        let code = "";
+        for(const node of alwaysNodes){
+            code += this.GenerateCodeFromNode(node);
+        }
+
         const start = this.nodes.find(n => n.internalName === this.#startingBlock);
         if (!start) return "";
-        const code = this.GenerateCodeFromNode(start);
+        code += this.GenerateCodeFromNode(start);
         return code;
     }
 
@@ -845,6 +850,7 @@ class LineBlox{
                 ...(node.pluginUuid != null ? {plugin: node.pluginUuid} : {}),
                 x: node.x,
                 y: node.y,
+                alwaysGenerate: node.alwaysGenerate ?? false,
                 inputs: node.inputs.map(add),
                 outputs: node.outputs.map(add)
             };
@@ -875,7 +881,6 @@ class LineBlox{
         let ws = gws.nodes;
 
         //load plugins
-        console.log("loading plugins:", gws.plugins);
         if(this.#supportPluginSystem) await this.#LoadPluginHandle(gws.plugins);
 
         const nodeMap = {};

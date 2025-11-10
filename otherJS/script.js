@@ -3,7 +3,7 @@ const tb = [
         category: "Main",
         color: "green",
         blocks: [
-            "__start__"
+            "__start__", "__start2__", "__start3__"
         ]
     },
     {
