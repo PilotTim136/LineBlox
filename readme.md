@@ -1,5 +1,10 @@
 # LineBlox
 
+> **Important:** LineBlox v1 will no longer be officially supported once v2 is released. 
+> You can still access v1 via the `legacy/v1` or `legacy/v1-beta` branches. 
+> v2 will replace v1 on the `main` and `beta` branches.
+> The duration until LineBlox v2 is currently unknown.
+
 **LineBlox** is a **node-based visual scripting tool** designed to run directly in the browser using **HTML** and **JavaScript**.
 
 
@@ -118,5 +123,6 @@ See [contributing.md](contributing.md) for ways to get started.
 [MIT](https://choosealicense.com/licenses/mit/)
 
 ![License](https://img.shields.io/badge/license-MIT-green)
+
 
 
