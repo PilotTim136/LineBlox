@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "none",
+    "lib": ["DOM", "ESNext"],
+    "strict": true,
+    "skipLibCheck": true,
+    "outFile": "./js/app.js",
+    "removeComments": true,
+    "downlevelIteration": true
+  },
+  "include": ["./scripts/Settings.ts", "./scripts/Vector2.ts", "./scripts/Color.ts", "./scripts/NodeIO.ts", "scripts/**/*"],
+  "exclude": ["node_modules"]
+}
