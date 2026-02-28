@@ -139,11 +139,14 @@ class LBNode{
         ctx.lineWidth = lineBefore;
     }
 
+    #absBase = 25;  //Quality of Life so if something changes it doesnt have to be made everywhere individually
+
     #drawIO(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){
         const inputs = nodeData.inputs;
         const outputs = nodeData.outputs;
         const height = nodeData.ioHeight;
-        const baseY = nodePos.y + 25;
+        const absBase = this.#absBase;
+        const baseY = nodePos.y + absBase;
 
         const r = 5;
         const calcR = r + 3;
@@ -169,17 +172,6 @@ class LBNode{
             else LBNode.DrawTriangle(ctx, nodePos.x - 4, y - 3.5, r * 2);
 
             if(!this.#willBeUsed) continue;
-            if(data.connectedTo != null && data.connectedTo.node != null){
-                const start = new Vector2(nodePos.x, y - hitboxY + 5);
-
-                const targetNode = data.connectedTo.node;
-                const ioIndex = targetNode.nodeData.outputs.indexOf(data.connectedTo);
-                const targetY = targetNode.position.y + 19.5 + ioIndex * height;
-
-                const end = new Vector2(targetNode.position.x + targetNode.nodeData.size.x, targetY);
-
-                LBNode.DrawLine(ctx, start, end);
-            }
 
             if(this.generatedHitboxes) continue;
             nodeData.ioHitboxes.push({
@@ -222,6 +214,36 @@ class LBNode{
         }
 
         this.generatedHitboxes = true;
+    }
+
+    DrawNodeConnections(canvas: LB_CanvasData){
+        const ctx = canvas.context;
+        const nodeData = this.nodeData;
+        const inputs = nodeData.inputs;
+        const nodePos = this.position;
+        const absBase = this.#absBase;
+        const baseY = nodePos.y + absBase;
+        const height = nodeData.ioHeight;
+        const hitSize = 10;
+        const hitSizeHalf = hitSize / 2;
+        const hitboxY = 3 + hitSizeHalf;
+
+        for(let i = 0; i < inputs.length; i++){
+            const data: LB_NodeIO = inputs[i];
+            const y = baseY + (i * height);
+
+            if(data.connectedTo != null && data.connectedTo.node != null){
+                const start = new Vector2(nodePos.x, y - hitboxY + 5);
+
+                const targetNode = data.connectedTo.node;
+                const ioIndex = targetNode.nodeData.outputs.indexOf(data.connectedTo);
+                const targetY = targetNode.position.y + absBase - 3.5 + ioIndex * height;
+
+                const end = new Vector2(targetNode.position.x + targetNode.nodeData.size.x, targetY);
+
+                LBNode.DrawLine(ctx, start, end);
+            }
+        }
     }
 
     #drawNodeName(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){
@@ -361,6 +383,7 @@ class LBNode{
         
         if(outputIO.type === "Connection"){
             inputIO.connectedTo = outputIO;
+            outputIO.connectedTo = inputIO;
             outputIO.connections.push(inputIO);
             return;
         }

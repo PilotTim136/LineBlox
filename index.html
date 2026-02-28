@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LineBlox 2</title>
+    <title>LineBlox 2 [BETA]</title>
     <style>
         body{
             background-color: black;
@@ -15,7 +15,7 @@
 <body>
     LineBloxV2 BETA
     <strong>[ToDo: Buttons for saving & loading saves, possibly autosave, ...]</strong>
-    <label style="position: absolute; right: 10px">LineBloxV2 - 0.0.1 - BETA</label>
+    <label style="position: absolute; right: 10px">| LineBloxV2 - 0.0.1 - BETA</label>
 
     <script src="js/app.js"></script>
     <script> DEBUG = true; </script> <!-- DEV NOTE: This is not needed, i still made it to enable the DEBUG term -->
@@ -30,7 +30,7 @@
         const n1 = LBNode.SpawnNode(true, "LB_Start", new Vector2(200, 200));
         const n2 = LBNode.SpawnNode(true, "__node1__", new Vector2(400, 250));
 
-        LBNode.ConnectNodes(n1.nodeData.outputs[0], n2.nodeData.inputs[0]);
+        //LBNode.ConnectNodes(n1.nodeData.outputs[0], n2.nodeData.inputs[0]);
     </script>
 </body>
 </html>

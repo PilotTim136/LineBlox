@@ -84,6 +84,15 @@ creator.RegisterNode({
 
                 return `${data.input["code2"] + data.input["code3"]}`;
             }
+        },
+        {
+            id: "code3",
+            name: "bool",
+            type: "Boolean",
+            allowMultiple: true,
+            code: data => {
+                return `true`;
+            }
         }
     ]
 });
@@ -95,6 +104,7 @@ creator.RegisterNode({
 const start = new LB_NodeData();
 const start_out_code = new LB_NodeIO("", "Connection", "code");
 start_out_code.code = data => {
+    console.log("[from start] data:", data);
     return data.output["code"];
 };
 
@@ -138,6 +148,57 @@ creator.RegisterNode({
             code: data => {
                 return `ay`;
             }
+        }
+    ]
+});
+
+creator.RegisterNode({
+    id: "__if__",
+    publicName: "If",
+    color: Color.fromHexString("#0081bd"),
+    width: 100,
+    category: "Example",
+    alwaysGenerate: 0,
+    inputs: [
+        {
+            id: "code",
+            name: "",
+            type: "Connection",
+            allowMultiple: false
+        },
+        {
+            id: "statement",
+            name: "Value",
+            type: "Boolean"
+        }
+    ],
+    outputs: [
+        {
+            id: "code",
+            name: "",
+            type: "Connection",
+            allowMultiple: false,
+            code: data => {
+                const trueBranch  = data.output["_true"]  ?? "";
+                const falseBranch = data.output["_false"] ?? "";
+
+                let result = `if(${data.input["statement"]}){\n${trueBranch}\n}`;
+                if(falseBranch) result += ` else {\n${falseBranch}\n}`;
+
+                return result;
+            }
+        },
+        {
+            id: "_true",
+            name: "True",
+            type: "Connection",
+            allowMultiple: false
+        },
+        {
+            id: "_false",
+            name: "False",
+            type: "Connection",
+            allowMultiple: false
         }
     ]
 });

@@ -281,6 +281,8 @@ class LBInstance{
     }
 
     #onDrawNode(){
+        //this is important. looks are important, alright?
+        for(const node of this.nodes) node.DrawNodeConnections(this.CanvasCtx_main);
         for(const node of this.nodes){
             node.DrawNode(this.CanvasCtx_main);
         }
@@ -351,229 +353,69 @@ class LBInstance{
         console.log("Generating code...");
         debug.group("CODE GEN");
 
-        const nodes = this.nodes;
+        const startNodes = this.nodes
+            .filter(n => n.nodeData.alwaysGenerate > 0)
+            .sort((a, b) => b.nodeData.alwaysGenerate - a.nodeData.alwaysGenerate);
+        debug.log("Amount of start nodes:", startNodes.length);
 
-        const nodeByUuid = new Map<number, LBNode>();
-        for(const n of nodes) nodeByUuid.set(n.nodeData.uuid, n);
+        const emitted = new Set<number>();
+        const inStack = new Set<number>();
 
-        function findNodeByOutput(io: LB_NodeIO): LBNode | null{
-            for(const n of nodes){
-                for(const out of n.nodeData.outputs){
-                    if(out === io) return n;
+        function ParseNode(current: LBNode){
+            if(!current) return "";
+            const id = current.nodeData.uuid;
+
+            if(emitted.has(id) || inStack.has(id)) return "";
+            let data = {input:{} as Record<string, string>, output:{} as Record<string, string>};
+            inStack.add(id);
+
+            console.log("Parsing node:", current.nodeData.uniqueId);
+
+            for(const io of current.nodeData.inputs){
+                if(io.type === "Connection" && io.connectedTo?.node)
+                    data.input[io.uniqueId] = ParseNode(io.connectedTo.node) ?? "";
+                if(io.code)
+                    data.input[io.uniqueId] = (data.input[io.uniqueId] ?? "") + (io.code(data) ?? "");
+            }
+
+            for(const io of current.nodeData.outputs){
+                if(io.type === "Connection" && io.connectedTo?.node){
+                    debug.log("Visiting (from => to):", current.nodeData.uniqueId, "=>", io.connectedTo.node.nodeData.uniqueId);
+                    data.output[io.uniqueId] = ParseNode(io.connectedTo.node) ?? "";
                 }
-            }
-            return null;
-        }
-
-        const execAdj = new Map<number, Set<number>>();
-        const execIncomingCount = new Map<number, number>();
-        for(const n of nodes){
-            execAdj.set(n.nodeData.uuid, new Set<number>());
-            execIncomingCount.set(n.nodeData.uuid, 0);
-        }
-        for(const n of nodes){
-            for(const out of n.nodeData.outputs){
-                if(out.type !== "Connection") continue;
-                for(const inIO of out.connections){
-                    if(!inIO || !inIO.node) continue;
-                    const down = inIO.node.nodeData.uuid;
-                    execAdj.get(n.nodeData.uuid)!.add(down);
-                    execIncomingCount.set(down, (execIncomingCount.get(down) ?? 0) + 1);
-                }
-            }
-        }
-
-        const seeds: number[] = [];
-        for(const n of nodes){
-            if(n.nodeData.alwaysGenerate > 1) seeds.push(n.nodeData.uuid);
-        }
-
-        const reachableExec = new Set<number>();
-        const stack: number[] = [...seeds];
-        while(stack.length){
-            const u = stack.pop()!;
-            if(reachableExec.has(u)) continue;
-            reachableExec.add(u);
-            const next = execAdj.get(u);
-            if(!next) continue;
-            for(const v of next)
-                if(!reachableExec.has(v)) stack.push(v);
-        }
-
-        const inCount = new Map<number, number>();
-        for(const id of reachableExec) inCount.set(id, 0);
-        for(const id of reachableExec){
-            let count = 0;
-            for(const [src, dests] of execAdj){
-                if(!reachableExec.has(src)) continue;
-                if(dests.has(id)) count++;
-            }
-            inCount.set(id, count);
-        }
-        const noDepsQueue: number[] = [];
-        for(const [id, cnt] of inCount)
-            if(cnt === 0) noDepsQueue.push(id);
-
-        const topoOrder: number[] = [];
-        while(noDepsQueue.length){
-            const id = noDepsQueue.shift()!;
-            topoOrder.push(id);
-            const dests = execAdj.get(id) ?? new Set<number>();
-            for(const d of dests){
-                if(!reachableExec.has(d)) continue;
-                const newCnt = (inCount.get(d) ?? 0) - 1;
-                inCount.set(d, newCnt);
-                if(newCnt === 0) noDepsQueue.push(d);
-            }
-        }
-        for(const id of reachableExec){
-            if(!topoOrder.includes(id)){
-                console.error("Cycle detected in execution graph! Node uuid:", id);
-                debug.groupEnd();
-                return "";
-            }
-        }
-        debug.log("Topological execution order (uuids):", topoOrder);
-
-        const dataCache = new Map<LB_NodeIO, string>();
-        const generatedCache = new Set<number>();
-
-        function resolveDataOutput(io: LB_NodeIO, seenIO: Set<LB_NodeIO> = new Set()): string{
-            if(!io) return "";
-            if(dataCache.has(io)) return dataCache.get(io)!;
-
-            if(seenIO.has(io)){
-                console.error("Data cycle detected for IO:", io.uniqueId);
-                return "";
-            }
-            seenIO.add(io);
-
-            const owner = findNodeByOutput(io);
-            if(!owner){
-                dataCache.set(io, "");
-                return "";
+                if(io.code)
+                    data.output[io.uniqueId] = (data.output[io.uniqueId] ?? "") + (io.code(data) ?? "");
             }
 
-            const upstreamInputValues: Record<string, string> = {};
-            for(const inp of owner.nodeData.inputs){
-                if(inp.connectedTo && inp.type !== "Connection"){
-                    upstreamInputValues[inp.uniqueId] = resolveDataOutput(inp.connectedTo, new Set(seenIO));
-                }else{
-                    upstreamInputValues[inp.uniqueId] = inp.value != null ? inp.value.toString() : "";
-                }
+            const nodeCode = current.nodeData.code?.(data) ?? "";
+            let fullCode = nodeCode;
+            for(const io of current.nodeData.outputs){
+                if(data.output[io.uniqueId]) fullCode += data.output[io.uniqueId];
             }
 
-            let result = "";
-            try{
-                result = io.code?.({ input: upstreamInputValues, output: {} }) ?? "";
-            }catch(e){
-                console.error("Exception while calling data output code on", owner.nodeData.uniqueId, e);
-                result = "";
-            }
-            result = result != null ? result.toString() : "";
-            dataCache.set(io, result);
-            return result;
-        }
+            emitted.add(id);
+            inStack.delete(id);
 
-        function resolveInputsForNode(node: LBNode): Record<string, string>{
-            const res: Record<string, string> = {};
-            for(const input of node.nodeData.inputs) {
-                if(input.connectedTo && input.type !== "Connection"){
-                    res[input.uniqueId] = resolveDataOutput(input.connectedTo);
-                }else{
-                    res[input.uniqueId] = input.value != null ? input.value.toString() : "";
-                }
-            }
-            return res;
-        }
-
-        function hasDataOutputConsumed(node: LBNode): boolean{
-            for(const out of node.nodeData.outputs){
-                if(out.type === "Connection") continue;
-                if(Array.isArray(out.connections) && out.connections.length > 0) return true;
-                for(const n of nodes){
-                    for(const inp of n.nodeData.inputs){
-                        if(inp.connectedTo === out) return true;
-                    }
-                }
-            }
-            return false;
+            console.log("Executing code for:", current.nodeData.uniqueId);
+            return fullCode;
         }
 
         let code = "";
 
-        const alwaysGenNodes = nodes
-            .filter(n => n.nodeData.alwaysGenerate > 1)
-            .sort((a, b) => b.nodeData.alwaysGenerate - a.nodeData.alwaysGenerate);
-
-        for (const ag of alwaysGenNodes){
-            const uuid = ag.nodeData.uuid;
-            if(generatedCache.has(uuid)) continue;
-
-            const inVals = resolveInputsForNode(ag);
-            let nodeCode = "";
-            for(const out of ag.nodeData.outputs){
-                if(out.type === "Connection" && out.code){
-                    try{
-                        const res = out.code({ input: inVals, output: {} });
-                        nodeCode += (res != null ? res.toString() : "");
-                    }catch(e){
-                        console.error("Error in out.code() for exec", ag.nodeData.uniqueId, e);
-                    }
-                }
+        for(const node of startNodes){
+            console.log("Parsing node:", node.nodeData.uniqueId, "with priority:", node.nodeData.alwaysGenerate);
+            try{
+                code += ParseNode(node);
+            }catch(e){
+                console.error("Error parsing node graph on node:\n" + node.nodeData.uniqueId +
+                    " (" + node.nodeData.uuid + ")\n", "------Stack Trace------\n", e);
+                code += "[ERROR] Failed to parse node graph.";
             }
-            code += nodeCode;
-            generatedCache.add(uuid);
-        }
-
-        for (const nid of topoOrder){
-            const node = nodeByUuid.get(nid)!;
-            if(!node) continue;
-
-            const uuid = node.nodeData.uuid;
-            if(generatedCache.has(uuid)){
-                debug.log(`Skipping node ${node.nodeData.uniqueId} (${node.nodeData.uuid}) - already generated`);
-                continue;
-            }
-
-            debug.log("Node:", node.nodeData.uniqueId, "uuid:", node.nodeData.uuid);
-            debug.log("inputs:", node.nodeData.inputs.map(i => ({ uid: i.uniqueId, connTo: i.connectedTo?.uniqueId ?? null, value: i.value })));
-            debug.log("outputs:", node.nodeData.outputs.map(o => ({ uid: o.uniqueId, type: o.type, connCount: Array.isArray(o.connections) ? o.connections.length : o.connections })));
-
-            const hasExecOutput = node.nodeData.outputs.some(o => o.type === "Connection");
-            const dataConsumed = hasDataOutputConsumed(node);
-            debug.log(`hasExecutionOutput=${hasExecOutput}, dataConsumed=${dataConsumed}, alwaysGenerate=${node.nodeData.alwaysGenerate}`);
-
-            if(!hasExecOutput && !dataConsumed && node.nodeData.alwaysGenerate <= 1){
-                debug.log("-> skipping (pure data node w/o consumer)");
-                generatedCache.add(uuid);
-                continue;
-            }
-
-            const inVals = resolveInputsForNode(node);
-            let nodeCode = "";
-
-            for(const out of node.nodeData.outputs){
-                if(out.type === "Connection" && out.code){
-                    try{
-                        const res = out.code({ input: inVals, output: {} });
-                        nodeCode += (res != null ? res.toString() : "");
-                    }catch(e){
-                        console.error("Error in out.code() for exec", node.nodeData.uniqueId, e);
-                    }
-                }
-            }
-
-            debug.log("-> generated code fragment length:", (nodeCode || "").length);
-            code += nodeCode;
-
-            generatedCache.add(uuid);
         }
 
         debug.groupEnd();
-        console.log("Code generated!");
-        console.log("Code:\n", code);
 
+        console.log(code);
         return code;
     }
 
