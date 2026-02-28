@@ -117,6 +117,11 @@ class LBNode{
         ctx.lineWidth = 2;
         this.#drawNodeName(ctx, nodePos, nodeSize, nodeData);
         this.#drawIO(ctx, nodePos, nodeSize, nodeData);
+        this.#drawInputs(ctx, nodePos, nodeSize, nodeData);
+    }
+
+    #drawInputs(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){
+
     }
 
     #drawIO(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){

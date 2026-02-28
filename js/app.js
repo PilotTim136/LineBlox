@@ -643,6 +643,9 @@ class LBNode {
         ctx.lineWidth = 2;
         this.#drawNodeName(ctx, nodePos, nodeSize, nodeData);
         this.#drawIO(ctx, nodePos, nodeSize, nodeData);
+        this.#drawInputs(ctx, nodePos, nodeSize, nodeData);
+    }
+    #drawInputs(ctx, nodePos, nodeSize, nodeData) {
     }
     #drawIO(ctx, nodePos, nodeSize, nodeData) {
         const inputs = nodeData.inputs;
@@ -1256,7 +1259,7 @@ class LBInstance {
         if (size.x = 0 && size.y == 0)
             goFromDefault = true;
         if (!goFromDefault && (size.x < 200 || size.y < 200)) {
-            console.warn("LineBlox Init: Size-Range too small! Going from default settings.");
+            debug.warn("LineBlox Init: Size-Range too small! Going from default settings.");
             goFromDefault = true;
         }
         if (goFromDefault) {
@@ -1328,10 +1331,10 @@ class LBInstance {
         this.CanvasCtx_bar = canvas;
         debug.log("Adding listeners...");
         window.addEventListener("resize", () => {
-            this.CanvasCtx_main.element.width = window.innerWidth - changeX;
-            this.CanvasCtx_main.element.height = window.innerHeight;
+            this.CanvasCtx_main.element.width = window.innerWidth - changeX - pos.x;
+            this.CanvasCtx_main.element.height = window.innerHeight - pos.y;
             this.CanvasCtx_bar.element.width = changeX;
-            this.CanvasCtx_bar.element.height = window.innerHeight;
+            this.CanvasCtx_bar.element.height = window.innerHeight - pos.y;
         });
         this.CanvasCtx_bar.sliderData[0] ??= {
             isDraggingH: false,

@@ -54,12 +54,14 @@ class LBInstance{
 
     #changeX = 400;
 
+    //todo: correctly fix the resize when window is resized
+    //note: done in the resize event listener
     constructor(pos: {x: number, y: number} = {x:0,y:0}, size: {x: number, y: number} = {x:0,y:0}){
         debug.group("LineBlox Initialization");
         let goFromDefault = false;
         if(size.x = 0 && size.y == 0) goFromDefault = true;
         if(!goFromDefault && (size.x < 200 || size.y < 200)){
-            console.warn("LineBlox Init: Size-Range too small! Going from default settings.");
+            debug.warn("LineBlox Init: Size-Range too small! Going from default settings.");
             goFromDefault = true;
         }
         if(goFromDefault){
@@ -68,7 +70,7 @@ class LBInstance{
         }
 
         //create the element and apply div
-        debug.log("Creating LineBlox div...")
+        debug.log("Creating LineBlox div...");
         const app = document.createElement("div");
         app.id = "LBApp";
         app.style.position = "absolute";
@@ -83,6 +85,8 @@ class LBInstance{
 
         //create the canvases and apply them to the div
         let changeX = this.#changeX;
+
+        //#region canvases & listeners
 
         debug.log("Creating main canvas...");
         let canvas = this.CreateCanvas(new Vector2(changeX - pos.x, 0), new Vector2(window.innerWidth - changeX, window.innerHeight - pos.y));
@@ -151,11 +155,11 @@ class LBInstance{
         //resize listener for when the window resizes
         //this was easier to make than i tought
         window.addEventListener("resize", ()=>{
-            this.CanvasCtx_main.element.width = window.innerWidth - changeX;
-            this.CanvasCtx_main.element.height = window.innerHeight;
+            this.CanvasCtx_main.element.width = window.innerWidth - changeX - pos.x;
+            this.CanvasCtx_main.element.height = window.innerHeight - pos.y;
 
             this.CanvasCtx_bar.element.width = changeX;
-            this.CanvasCtx_bar.element.height = window.innerHeight;
+            this.CanvasCtx_bar.element.height = window.innerHeight - pos.y;
         });
 
         this.CanvasCtx_bar.sliderData[0] ??= {
@@ -166,6 +170,8 @@ class LBInstance{
         };
         this.CanvasCtx_bar.ignoreHorizontal = true;
         this.CanvasCtx_bar.onScrollLogic = LB_Background.LogicScroll;
+
+        //#endregion
 
         debug.log("Adding frametasks...");
         this.#addFrameTasks();
