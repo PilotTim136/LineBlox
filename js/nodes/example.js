@@ -119,11 +119,20 @@ creator.RegisterNode({
     width: 100,
     category: "Example",
     alwaysGenerate: 0,
-    inputs: [],
+    inputs: [
+        {
+            id: "strIn",
+            name: "",
+            type: "String",
+            hide: true,
+            integrated: true,
+            boxWidth: 50
+        }
+    ],
     outputs: [
         {
-            id: "code2",
-            name: "aaaa",
+            id: "strOut",
+            name: "",
             type: "String",
             allowMultiple: true,
             code: data => {

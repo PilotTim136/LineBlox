@@ -7,6 +7,10 @@ class LB_NodeIO{
     uniqueId: string = "LB_uniqueIO1";
     /** If true, will continue the code afterwards. NOTE: only one can be active on an active in-/output. Only the first one found will be used */
     continueCode: boolean = false;
+    /** If true, will hide the io of the node */
+    hidden: boolean = false;
+    /** If something lika a String, will show a text-field, number field or something similar */
+    integrated: boolean = false;
 
     /** This is the NODE this nodeIO belongs to */
     node: LBNode | null = null;
@@ -19,6 +23,7 @@ class LB_NodeIO{
     connections: LB_NodeIO[] = [];
     /** The UUID of the node that is connected. (translating to JSON) */
     connectedToId: number = 0;
+    boxWidth: number = 14;
     allowMultiple: boolean = true;
 
     #uuid: number = 0;
@@ -49,6 +54,9 @@ class LB_NodeIO{
         io.acceptedTypes = this.acceptedTypes;
         io.#uuid = LBInstance.GenerateUUID();
         io.code = this.code;
+        io.hidden = this.hidden;
+        io.integrated = this.integrated;
+        io.boxWidth = this.boxWidth;
 
         return io;
     }

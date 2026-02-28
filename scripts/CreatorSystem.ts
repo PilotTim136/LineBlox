@@ -30,6 +30,9 @@ class LBCreator{
                 nio.allowMultiple = io.allowMultiple;
                 nio.continueCode = io.continueCode;
                 nio.code = io.code;
+                nio.hidden = io.hide;
+                nio.integrated = io.integrated;
+                nio.boxWidth = io.boxWidth;
 
                 ioField.push(nio);
             }

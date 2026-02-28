@@ -90,10 +90,33 @@ class Color {
         const b = parseInt(hex.slice(4, 6), 16);
         return new Color(r, g, b, 1);
     }
+    static fromRgbaString(rgba) {
+        const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+        if (!match)
+            return new Color();
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const a = match[4] !== undefined ? parseFloat(match[4]) : 1;
+        return new Color(r, g, b, a);
+    }
+    static darken(amount, col) {
+        const base = typeof col === "string" ? Color.fromRgbaString(col) : col;
+        base.r -= amount;
+        base.g -= amount;
+        base.b -= amount;
+        base.r = Math.min(Math.max(base.r, 0), 255);
+        base.g = Math.min(Math.max(base.g, 0), 255);
+        base.b = Math.min(Math.max(base.b, 0), 255);
+        return base;
+    }
     darken(amount) {
         this.r -= amount;
         this.g -= amount;
         this.b -= amount;
+        this.r = Math.min(Math.max(this.r, 0), 255);
+        this.g = Math.min(Math.max(this.g, 0), 255);
+        this.b = Math.min(Math.max(this.b, 0), 255);
         return this;
     }
     toJson() {
@@ -116,11 +139,14 @@ class LB_NodeIO {
     type = "Any";
     uniqueId = "LB_uniqueIO1";
     continueCode = false;
+    hidden = false;
+    integrated = false;
     node = null;
     acceptedTypes = [];
     connectedTo = null;
     connections = [];
     connectedToId = 0;
+    boxWidth = 14;
     allowMultiple = true;
     #uuid = 0;
     value;
@@ -150,6 +176,9 @@ class LB_NodeIO {
         io.acceptedTypes = this.acceptedTypes;
         io.#uuid = LBInstance.GenerateUUID();
         io.code = this.code;
+        io.hidden = this.hidden;
+        io.integrated = this.integrated;
+        io.boxWidth = this.boxWidth;
         return io;
     }
     toJSON() {
@@ -510,6 +539,9 @@ class LBCreator {
                 nio.allowMultiple = io.allowMultiple;
                 nio.continueCode = io.continueCode;
                 nio.code = io.code;
+                nio.hidden = io.hide;
+                nio.integrated = io.integrated;
+                nio.boxWidth = io.boxWidth;
                 ioField.push(nio);
             }
         }
@@ -643,15 +675,28 @@ class LBNode {
         ctx.lineWidth = 2;
         this.#drawNodeName(ctx, nodePos, nodeSize, nodeData);
         this.#drawIO(ctx, nodePos, nodeSize, nodeData);
-        this.#drawInputs(ctx, nodePos, nodeSize, nodeData);
     }
-    #drawInputs(ctx, nodePos, nodeSize, nodeData) {
+    #drawInput(ctx, drawPos, io) {
+        const col = LBInstance.nodeColorData[io.type];
+        let fill = ctx.createLinearGradient(drawPos.x, drawPos.y, drawPos.x + io.boxWidth, drawPos.y);
+        fill.addColorStop(0, col);
+        fill.addColorStop(1, Color.darken(20, col).toRgbaString());
+        ctx.strokeStyle = fill;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        const lineBefore = ctx.lineWidth;
+        ctx.beginPath();
+        ctx.roundRect(drawPos.x, drawPos.y, io.boxWidth, 14, [5, 5, 5, 5]);
+        ctx.closePath();
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+        ctx.lineWidth = lineBefore;
     }
     #drawIO(ctx, nodePos, nodeSize, nodeData) {
         const inputs = nodeData.inputs;
         const outputs = nodeData.outputs;
         const height = nodeData.ioHeight;
-        const baseY = nodePos.y + 22.5;
+        const baseY = nodePos.y + 25;
         const r = 5;
         const calcR = r + 3;
         if (nodeData.dynamicHeight)
@@ -663,15 +708,19 @@ class LBNode {
         const hitboxY = 3 + hitSizeHalf;
         ctx.textAlign = "left";
         for (let i = 0; i < inputs.length; i++) {
-            const y = baseY + (i * height);
             const data = inputs[i];
+            const y = baseY + (i * height);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(data.name, nodePos.x + calcR, y, nodeSize.x / 2 - calcR);
+            if (data.integrated)
+                this.#drawInput(ctx, { x: nodePos.x + calcR + ctx.measureText(data.name).width, y: y - 8 }, data);
+            if (data.hidden)
+                continue;
             ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
             if (data.type != "Connection")
                 LBNode.DrawCircle(ctx, nodePos.x, y - 3.5, r);
             else
                 LBNode.DrawTriangle(ctx, nodePos.x - 4, y - 3.5, r * 2);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(data.name, nodePos.x + calcR, y, nodeSize.x / 2 - calcR);
             if (!this.#willBeUsed)
                 continue;
             if (data.connectedTo != null && data.connectedTo.node != null) {
@@ -697,15 +746,17 @@ class LBNode {
         }
         ctx.textAlign = "right";
         for (let i = 0; i < outputs.length; i++) {
-            const y = baseY + (i * height);
             const data = outputs[i];
+            const y = baseY + (i * height);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(data.name, nodePos.x + nodeSize.x - calcR, y, nodeSize.x / 2 - calcR);
+            if (data.hidden)
+                continue;
             ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
             if (data.type != "Connection")
                 LBNode.DrawCircle(ctx, nodePos.x + nodeSize.x, y - 3.5, r);
             else
                 LBNode.DrawTriangle(ctx, nodePos.x + nodeSize.x - 4, y - 3.5, r * 2);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(data.name, nodePos.x + nodeSize.x - calcR, y, nodeSize.x / 2 - calcR);
             if (!this.#willBeUsed)
                 continue;
             if (this.generatedHitboxes)

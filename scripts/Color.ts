@@ -44,11 +44,36 @@ class Color{
         const b = parseInt(hex.slice(4, 6), 16);
         return new Color(r, g, b, 1);
     }
+    static fromRgbaString(rgba: string): Color{
+        const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+        if(!match) return new Color();
+
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const a = match[4] !== undefined ? parseFloat(match[4]) : 1;
+
+        return new Color(r, g, b, a);
+    }
+    static darken(amount: number, col: Color | string){
+        const base: Color = typeof col === "string" ? Color.fromRgbaString(col) : col;
+        base.r -= amount;
+        base.g -= amount;
+        base.b -= amount;
+
+        base.r = Math.min(Math.max(base.r, 0), 255);
+        base.g = Math.min(Math.max(base.g, 0), 255);
+        base.b = Math.min(Math.max(base.b, 0), 255);
+        return base;
+    }
 
     darken(amount: number): Color{
         this.r -= amount;
         this.g -= amount;
         this.b -= amount;
+        this.r = Math.min(Math.max(this.r, 0), 255);
+        this.g = Math.min(Math.max(this.g, 0), 255);
+        this.b = Math.min(Math.max(this.b, 0), 255);
         return this;
     }
 

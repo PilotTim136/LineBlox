@@ -1,4 +1,5 @@
 //this is generally only for storing 2D vector data, without having to manually write "X, Y, height, width" etc.
+//please dont use this as much, due to GC and classes possibly created every frame
 
 class Vector2{
     x: number;

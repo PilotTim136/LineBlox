@@ -117,18 +117,33 @@ class LBNode{
         ctx.lineWidth = 2;
         this.#drawNodeName(ctx, nodePos, nodeSize, nodeData);
         this.#drawIO(ctx, nodePos, nodeSize, nodeData);
-        this.#drawInputs(ctx, nodePos, nodeSize, nodeData);
     }
 
-    #drawInputs(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){
+    #drawInput(ctx: CanvasRenderingContext2D, drawPos: {x:number,y:number}, io: LB_NodeIO){
+        const col = LBInstance.nodeColorData[io.type];
+        let fill = ctx.createLinearGradient(drawPos.x, drawPos.y, drawPos.x + io.boxWidth, drawPos.y);
+        fill.addColorStop(0, col);
+        fill.addColorStop(1, Color.darken(20, col).toRgbaString());
+        ctx.strokeStyle = fill;
+        
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
 
+        const lineBefore = ctx.lineWidth;
+        ctx.beginPath();
+        ctx.roundRect(drawPos.x, drawPos.y, io.boxWidth, 14, [5, 5, 5, 5]);
+        ctx.closePath();
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.lineWidth = lineBefore;
     }
 
     #drawIO(ctx: CanvasRenderingContext2D, nodePos: Vector2, nodeSize: Vector2, nodeData: LB_NodeData){
         const inputs = nodeData.inputs;
         const outputs = nodeData.outputs;
         const height = nodeData.ioHeight;
-        const baseY = nodePos.y + 22.5;
+        const baseY = nodePos.y + 25;
 
         const r = 5;
         const calcR = r + 3;
@@ -141,15 +156,17 @@ class LBNode{
 
         ctx.textAlign = "left";
         for(let i = 0; i < inputs.length; i++){
-            const y = baseY + (i * height);
             const data: LB_NodeIO = inputs[i];
-
-            ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
-            if(data.type != "Connection") LBNode.DrawCircle(ctx, nodePos.x, y - 3.5, r);
-            else LBNode.DrawTriangle(ctx, nodePos.x - 4, y - 3.5, r * 2);
+            const y = baseY + (i * height);
 
             ctx.fillStyle = "#ffffff";
             ctx.fillText(data.name, nodePos.x + calcR, y, nodeSize.x / 2 - calcR);
+
+            if(data.integrated) this.#drawInput(ctx, {x: nodePos.x + calcR + ctx.measureText(data.name).width, y: y - 8}, data);
+            if(data.hidden) continue;
+            ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
+            if(data.type != "Connection") LBNode.DrawCircle(ctx, nodePos.x, y - 3.5, r);
+            else LBNode.DrawTriangle(ctx, nodePos.x - 4, y - 3.5, r * 2);
 
             if(!this.#willBeUsed) continue;
             if(data.connectedTo != null && data.connectedTo.node != null){
@@ -179,15 +196,16 @@ class LBNode{
 
         ctx.textAlign = "right";
         for(let i = 0; i < outputs.length; i++){
-            const y = baseY + (i * height);
             const data: LB_NodeIO = outputs[i];
-
-            ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
-            if(data.type != "Connection") LBNode.DrawCircle(ctx, nodePos.x + nodeSize.x, y - 3.5, r);
-            else LBNode.DrawTriangle(ctx, nodePos.x + nodeSize.x - 4, y - 3.5, r * 2);
+            const y = baseY + (i * height);
 
             ctx.fillStyle = "#ffffff";
             ctx.fillText(data.name, nodePos.x + nodeSize.x - calcR, y, nodeSize.x / 2 - calcR);
+
+            if(data.hidden) continue;
+            ctx.fillStyle = LBInstance.nodeColorData[data.type] ?? "#ffffff";
+            if(data.type != "Connection") LBNode.DrawCircle(ctx, nodePos.x + nodeSize.x, y - 3.5, r);
+            else LBNode.DrawTriangle(ctx, nodePos.x + nodeSize.x - 4, y - 3.5, r * 2);
 
             if(!this.#willBeUsed) continue;
             if(this.generatedHitboxes) continue;
