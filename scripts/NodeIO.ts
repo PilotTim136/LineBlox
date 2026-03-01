@@ -28,7 +28,7 @@ class LB_NodeIO{
 
     #uuid: number = 0;
 
-    value: any;
+    value: any = null;
 
     get uuid(): number{ return this.#uuid; }
     set setUuid(val: number){ this.#uuid = val; }

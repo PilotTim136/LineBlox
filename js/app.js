@@ -148,7 +148,7 @@ class LB_NodeIO {
     boxWidth = 14;
     allowMultiple = true;
     #uuid = 0;
-    value;
+    value = null;
     get uuid() { return this.#uuid; }
     set setUuid(val) { this.#uuid = val; }
     code = null;
@@ -1579,6 +1579,28 @@ class LBInstance {
         debug.log("Amount of start nodes:", startNodes.length);
         const emitted = new Set();
         const inStack = new Set();
+        function EvalInputs(current, data, doCon = false) {
+            for (const io of current.nodeData.inputs) {
+                if (io.type === "Connection" && io.connectedTo?.node && doCon)
+                    data.input[io.uniqueId] = ParseNode(io.connectedTo.node) ?? "";
+                else if (io.code)
+                    data.input[io.uniqueId] = (data.input[io.uniqueId] ?? "") + (io.code(data) ?? "");
+                else if (io.value != undefined && io.value != null)
+                    data.input[io.uniqueId] = io.value ?? "";
+                else if (io.connectedTo?.node) {
+                    const con = io.connectedTo;
+                    const node = io.connectedTo.node;
+                    const childData = { input: {}, output: {} };
+                    EvalInputs(node, childData);
+                    if (con.code) {
+                        debug.log("Giving values:", childData, "to con.code");
+                        data.input[io.uniqueId] = con.code(childData) ?? "";
+                    }
+                }
+                else
+                    data.input[io.uniqueId] = "";
+            }
+        }
         function ParseNode(current) {
             if (!current)
                 return "";
@@ -1587,35 +1609,37 @@ class LBInstance {
                 return "";
             let data = { input: {}, output: {} };
             inStack.add(id);
-            console.log("Parsing node:", current.nodeData.uniqueId);
-            for (const io of current.nodeData.inputs) {
-                if (io.type === "Connection" && io.connectedTo?.node)
-                    data.input[io.uniqueId] = ParseNode(io.connectedTo.node) ?? "";
-                if (io.code)
-                    data.input[io.uniqueId] = (data.input[io.uniqueId] ?? "") + (io.code(data) ?? "");
-            }
+            debug.log("Parsing node:", current.nodeData.uniqueId);
+            EvalInputs(current, data, true);
             for (const io of current.nodeData.outputs) {
+                if (io.code) {
+                    const code = io.code(data) ?? "";
+                    const out = data.output[io.uniqueId] ?? "";
+                    debug.log("[Def] Setting data.output[", io.uniqueId, "] to", code, "\nwith additional data:", out, "\ncurrent:", current.nodeData.uniqueId);
+                    data.output[io.uniqueId] = out + code;
+                }
                 if (io.type === "Connection" && io.connectedTo?.node) {
                     debug.log("Visiting (from => to):", current.nodeData.uniqueId, "=>", io.connectedTo.node.nodeData.uniqueId);
-                    data.output[io.uniqueId] = ParseNode(io.connectedTo.node) ?? "";
+                    const code = ParseNode(io.connectedTo.node) ?? "";
+                    const out = data.output[io.uniqueId] ?? "";
+                    debug.log("[Con] Setting data.output[", io.uniqueId, "] to", code, "\nwith additional data:", out, "\ncurrent:", current.nodeData.uniqueId);
+                    data.output[io.uniqueId] = out + code;
                 }
-                if (io.code)
-                    data.output[io.uniqueId] = (data.output[io.uniqueId] ?? "") + (io.code(data) ?? "");
             }
             const nodeCode = current.nodeData.code?.(data) ?? "";
             let fullCode = nodeCode;
             for (const io of current.nodeData.outputs) {
-                if (data.output[io.uniqueId])
+                if (io.type === "Connection" && data.output[io.uniqueId])
                     fullCode += data.output[io.uniqueId];
             }
             emitted.add(id);
             inStack.delete(id);
-            console.log("Executing code for:", current.nodeData.uniqueId);
+            debug.log("Executing code for:", current.nodeData.uniqueId);
             return fullCode;
         }
         let code = "";
         for (const node of startNodes) {
-            console.log("Parsing node:", node.nodeData.uniqueId, "with priority:", node.nodeData.alwaysGenerate);
+            debug.log("Parsing node:", node.nodeData.uniqueId, "with priority:", node.nodeData.alwaysGenerate);
             try {
                 code += ParseNode(node);
             }

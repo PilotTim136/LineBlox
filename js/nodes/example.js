@@ -17,7 +17,7 @@ const node1 = new LB_NodeData();
 const node1_out_code = new LB_NodeIO("", "Connection", "code", false/*, true*/);
 node1_out_code.code = data => {
     const codeIn = data.input?.["code"] ?? "";
-    return codeIn + "hello (__node1__)\n";
+    return codeIn + "[node1]\n";
 };
 
 node1.uniqueId = "__node1__";
@@ -51,12 +51,12 @@ creator.RegisterNode({
             allowMultiple: false
         },
         {
-            id: "code2",
+            id: "_a",
             name: "a",
             type: "String"
         },
         {
-            id: "code3",
+            id: "_b",
             name: "b",
             type: "String"
         }
@@ -67,9 +67,10 @@ creator.RegisterNode({
             name: "",
             type: "Connection",
             code: data => {
-                const code2 = data.input["code2"] ?? "";
-                const code3 = data.input["code3"] ?? "";
-                return (data.input["code"] ?? "") + `[${code2}], [${code3}]\n`;
+                const code2 = data.input["_a"] ?? "";
+                const code3 = data.input["_b"] ?? "";
+                console.log(data);
+                return (data.input["code"] ?? "") + `[node2] {(${code2}), (${code3})}\n`;
             }
         },
         {
@@ -79,8 +80,8 @@ creator.RegisterNode({
             allowMultiple: true,    //wether or not multiple connections can be made or not
             code: data => {
                 //data only has input-values here!
-                const code2 = data.input["code2"] ?? "";
-                const code3 = data.input["code3"] ?? "";
+                const code2 = data.input["_a"] ?? "";
+                const code3 = data.input["_b"] ?? "";
 
                 return `${data.input["code2"] + data.input["code3"]}`;
             }
