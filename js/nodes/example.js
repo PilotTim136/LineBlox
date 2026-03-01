@@ -83,7 +83,7 @@ creator.RegisterNode({
                 const code2 = data.input["_a"] ?? "";
                 const code3 = data.input["_b"] ?? "";
 
-                return `${data.input["code2"] + data.input["code3"]}`;
+                return `${code2 + code3}`;
             }
         },
         {

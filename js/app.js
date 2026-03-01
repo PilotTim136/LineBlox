@@ -1591,7 +1591,7 @@ class LBInstance {
                     const con = io.connectedTo;
                     const node = io.connectedTo.node;
                     const childData = { input: {}, output: {} };
-                    EvalInputs(node, childData);
+                    EvalInputs(node, childData, true);
                     if (con.code) {
                         debug.log("Giving values:", childData, "to con.code");
                         data.input[io.uniqueId] = con.code(childData) ?? "";

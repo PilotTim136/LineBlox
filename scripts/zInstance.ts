@@ -371,7 +371,7 @@ class LBInstance{
                     const node = io.connectedTo.node;
 
                     const childData = {input: {} as Record<string, any>, output: {} as Record<string, any>};
-                    EvalInputs(node, childData);
+                    EvalInputs(node, childData, true);
 
                     if(con.code){
                         debug.log("Giving values:", childData, "to con.code");
